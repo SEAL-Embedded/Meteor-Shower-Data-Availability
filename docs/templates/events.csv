@@ -1,0 +1,4 @@
+kind,time,label,location,latitude,longitude,magnitude,duration_s,time_uncertainty_s,url,source_ref
+fireball,2024-08-12T05:20:00Z,Fireball reported over Wisconsin,"Wisconsin, United States",,,-11,3.5,60,,4676j
+fireball,2024-08-12T20:44:00Z,Fireball reported over Oregon,"Oregon, United States",,,-9,2.5,60,,4691c
+rocket_launch,2024-08-02T05:01:00Z,Falcon 9 launch,"Kennedy Space Center, Florida",28.5729,-80.6490,,,,,f9-2024-08-02

@@ -1,0 +1,1886 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data Availability Dashboard</title>
+<!-- Declared so the browser stops requesting /favicon.ico. A standing 404 in the console is
+     noise in the one place someone looks to find out whether the page is telling the truth. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230b0e14'/%3E%3Crect x='2' y='7' width='7' height='2' fill='%234fc78a'/%3E%3Crect x='10' y='7' width='4' height='2' fill='%23e0a445'/%3E%3C/svg%3E">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/nocturne-9344ea2d-4595-478c-9781-2e3deaf3828f/styles.css">
+  <script src="_ds/nocturne-9344ea2d-4595-478c-9781-2e3deaf3828f/_ds_bundle.js"></script>
+  <style>
+    html, body { height: 100%; }
+    body { margin: 0; overflow: hidden; }
+    a { color: var(--color-accent); }
+    a:hover { color: var(--color-accent-300); }
+    .mono { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; letter-spacing: -0.01em; }
+    .scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+    .scroll::-webkit-scrollbar-thumb { background: var(--color-neutral-800); border-radius: 6px; }
+    .scroll::-webkit-scrollbar-track { background: transparent; }
+    .greyscale { filter: grayscale(1) contrast(1.05); }
+    /* Light ground: the same Nocturne ramps, reassigned. Every step below is a
+       token value from styles.css — the ramp is reversed so "900" still means
+       "closest to the ground" and every existing var() reference stays correct. */
+    .theme-light {
+      --color-bg: #f3f5fe;
+      --color-surface: #edf0fb; /* between the ground and neutral-900 so cards stay distinct from lane fills */
+      --color-text: #292b31;
+      --color-divider: color-mix(in srgb, #292b31 18%, transparent);
+      /* Not a straight 100↔900 flip: the dark ground sits below neutral-900,
+         while the light ground IS neutral-100, so a plain mirror compresses
+         every mid-tone one step toward the paper. Each role is shifted one
+         step darker to hold the contrast the dark theme had. */
+      --color-neutral-100: #161826; --color-neutral-200: #292b31; --color-neutral-300: #3f424d;
+      --color-neutral-400: #595d6c; --color-neutral-500: #75798c; --color-neutral-600: #9397ab;
+      --color-neutral-700: #b2b6ca; --color-neutral-800: #cfd3e5; --color-neutral-900: #e4e7f5;
+      --color-accent: #5d5294;
+      --color-accent-100: #2b2741; --color-accent-200: #2b2741; --color-accent-300: #423a6a;
+      --color-accent-400: #5d5294; --color-accent-500: #796cbf; --color-accent-600: #968ae0;
+      --color-accent-700: #b5abfc; --color-accent-800: #d2cefd; --color-accent-900: #e7e5fe;
+      --shadow-sm: 0 0 0 1px #cfd3e5;
+      --shadow-md: 0 0 0 1px #b2b6ca, 0 6px 18px rgba(41,43,49,0.12);
+      --shadow-lg: 0 0 0 1px #9397ab, 0 16px 40px rgba(41,43,49,0.18);
+    }
+  </style>
+</helmet>
+<div style="height: 100vh; display: flex; flex-direction: column; background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); font-size: 19px;">
+
+  <header style="display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); padding: 8px var(--space-6); border-bottom: 1px solid var(--color-divider); flex: none;">
+    <div style="display: flex; flex-direction: column; gap: 1px; margin-right: var(--space-2); min-width: 0; overflow: hidden;">
+      <div style="font-family: var(--font-heading); font-weight: 500; font-size: 22px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Ionosphere Data Availability</div>
+      <div class="mono" style="font-size: 14px; color: var(--color-neutral-500); letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">SEAL EMBEDDED · ALL TIMES UTC</div>
+    </div>
+
+    <nav style="display: flex; gap: 2px; padding: 2px; border: 1px solid var(--color-divider); border-radius: var(--radius-md); flex: none;">
+      <button type="button" class="btn" style="{{ navTimelineStyle }}" onClick="{{ goTimeline }}">Timeline</button>
+      <button type="button" class="btn" style="{{ navCampaignStyle }}" onClick="{{ goCampaign }}">Campaign</button>
+      <button type="button" class="btn" style="{{ navRecordsStyle }}" onClick="{{ goRecords }}">Records</button>
+    </nav>
+
+    <div style="display: flex; align-items: center; gap: var(--space-3); margin-left: auto; flex: none;">
+      <div class="mono" style="text-align: right; font-size: 14px; line-height: 1.45; color: var(--color-neutral-500); min-width: 0; overflow: hidden; text-overflow: ellipsis;">
+        <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">dataset <span style="color: var(--color-accent-300);">{{ datasetVersion }}</span> · scanned {{ scanTimestamp }}</div>
+      </div>
+      <div class="seg" style="flex: none;">
+        <label class="seg-opt" style="{{ lightOptStyle }}"><input type="radio" name="theme" checked="{{ isLight }}" onChange="{{ setLight }}">Light</label>
+        <label class="seg-opt" style="{{ darkOptStyle }}"><input type="radio" name="theme" checked="{{ isDark }}" onChange="{{ setDark }}">Dark</label>
+      </div>
+      <button type="button" class="btn btn-ghost" style="{{ greyStyle }}" onClick="{{ toggleGreyscale }}">Greyscale</button>
+      <button type="button" class="btn btn-primary" style="font-size: 17px; padding: 5px 11px;" onClick="{{ toggleManage }}">{{ manageLabel }}</button>
+    </div>
+  </header>
+
+  <div style="display: flex; align-items: center; gap: var(--space-3); padding: 3px var(--space-6); background: var(--color-accent-900); border-bottom: 1px solid var(--color-divider); font-size: 15.5px; flex: none;">
+    <span class="tag tag-outline" style="font-size: 13.5px; padding: 0 6px;">{{ provenanceTag }}</span>
+    <span style="color: var(--color-neutral-400); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ provenanceNote }}</span>
+    <sc-if value="{{ hasBroken }}" hint-placeholder-val="{{ true }}">
+      <button type="button" class="btn btn-ghost" style="font-size: 15.5px; padding: 0 6px; margin-left: auto; white-space: nowrap; color: var(--color-accent-300);" onClick="{{ toggleBroken }}">⚠ {{ brokenCount }} undrawable — excluded, never dropped {{ brokenCaret }}</button>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ brokenOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); padding: 5px var(--space-6); border-bottom: 1px solid var(--color-divider); font-size: 16px; flex: none; background: var(--color-neutral-900); color: var(--color-neutral-400);">
+      <sc-for list="{{ brokenList }}" as="b" hint-placeholder-count="3">
+        <span><span class="mono" style="color: var(--color-neutral-300);">{{ b.id }}</span> — {{ b.reason }}</span>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ manageOn }}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; align-items: center; gap: var(--space-3); padding: 6px var(--space-6); border-bottom: 1px solid var(--color-divider); background: var(--color-accent-900); font-size: 16px; flex: none;">
+      <span class="tag tag-accent" style="font-size: 14px; padding: 1px 7px;">MANAGE MODE</span>
+      <span style="color: var(--color-neutral-300);">{{ pendingLabel }}</span>
+      <span style="color: var(--color-neutral-500);">Local to this browser. Nothing reaches the repo until you export and commit.</span>
+      <div style="display: flex; gap: var(--space-2); margin-left: auto;">
+        <button type="button" class="btn btn-secondary" style="font-size: 16px; padding: 3px 9px;" onClick="{{ discardPending }}">Discard local edits</button>
+        <button type="button" class="btn btn-primary" style="font-size: 16px; padding: 3px 9px;" onClick="{{ exportPatch }}">Export patch (JSON)</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isTimeline }}" hint-placeholder-val="{{ false }}">
+    <div style="flex: 1; display: flex; min-height: 0;">
+      <div class="scroll" style="flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow-y: auto;">
+
+        <div style="display: flex; align-items: center; gap: var(--space-2); padding: 5px var(--space-6); border-bottom: 1px solid var(--color-divider); flex: none;">
+          <span class="mono" style="font-size: 14px; letter-spacing: 0.08em; color: var(--color-neutral-500); flex: none;">JUMP</span>
+          <div style="display: flex; gap: 3px; flex-wrap: wrap;">
+            <sc-for list="{{ presets }}" as="p" hint-placeholder-count="5">
+              <button type="button" class="btn btn-secondary" style="{{ p.style }}" onClick="{{ p.go }}">{{ p.label }}</button>
+            </sc-for>
+          </div>
+          <div style="display: flex; align-items: center; gap: 5px; margin-left: auto; flex: none;">
+            <button type="button" class="btn btn-secondary" style="font-size: 16px; padding: 2px 7px;" onClick="{{ zoomOut }}">−</button>
+            <input type="range" min="0" max="1000" value="{{ zoomSlider }}" onInput="{{ onZoomSlider }}" style="width: 104px; accent-color: var(--color-accent);" aria-label="Zoom span, six weeks to ten seconds">
+            <button type="button" class="btn btn-secondary" style="font-size: 16px; padding: 2px 7px;" onClick="{{ zoomIn }}">+</button>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: stretch; gap: var(--space-4); padding: var(--space-3) var(--space-6) 0; flex: none;">
+          <div style="flex: 1; min-width: 0;">{{ ribbonEl }}</div>
+        </div>
+
+        <div style="display: flex; align-items: baseline; gap: var(--space-3); padding: var(--space-2) var(--space-6) var(--space-2); flex: none; flex-wrap: wrap;">
+          <div style="display: flex; align-items: baseline; gap: 6px;">
+            <sc-for list="{{ crumbs }}" as="c" hint-placeholder-count="3">
+              <button type="button" class="btn btn-ghost" style="{{ c.style }}" onClick="{{ c.go }}">{{ c.label }}</button>
+            </sc-for>
+          </div>
+          <span class="mono" style="font-size: 15.5px; color: var(--color-neutral-500); white-space: nowrap;">{{ resolutionLabel }}</span>
+          <span class="mono" style="font-size: 15.5px; color: var(--color-neutral-500); white-space: nowrap;">{{ moonLabel }}</span>
+          <span class="mono" style="font-size: 15.5px; color: var(--color-accent-300); margin-left: auto; white-space: nowrap;">{{ overlapHeadline }}</span>
+        </div>
+
+        <sc-if value="{{ hasContext }}" hint-placeholder-val="{{ true }}">
+          <div style="padding: 0 var(--space-6) var(--space-2); flex: none;">{{ contextEl }}</div>
+        </sc-if>
+
+        <div class="scroll" style="flex: 1; min-height: 240px; overflow: auto; padding: 0 var(--space-6) var(--space-4);" tabIndex="0" onKeyDown="{{ onKey }}" onMouseMove="{{ onPlotMove }}" onMouseLeave="{{ onPlotLeave }}" onMouseDown="{{ onPlotDown }}" onWheel="{{ onPlotWheel }}" ref="{{ plotRef }}">
+          {{ plotEl }}
+          <sc-if value="{{ isEmptyView }}" hint-placeholder-val="{{ false }}">
+            <div style="margin: var(--space-6) 0; padding: var(--space-6); border: 1px dashed var(--color-neutral-700); border-radius: var(--radius-md); max-width: 620px;">
+              <div style="font-family: var(--font-heading); font-size: 23px; margin-bottom: 6px;">No records in this window</div>
+              <p style="color: var(--color-neutral-400); font-size: 18.5px; line-height: 1.55; margin-bottom: var(--space-3);">{{ emptyDetail }}</p>
+              <button type="button" class="btn btn-primary" style="font-size: 17px;" onClick="{{ goNearest }}">{{ nearestLabel }}</button>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: var(--space-4); padding: var(--space-2) var(--space-6) var(--space-3); border-top: 1px solid var(--color-divider); flex-wrap: wrap; flex: none;">
+          <span class="mono" style="font-size: 14px; letter-spacing: 0.08em; color: var(--color-neutral-500); flex: none;">OVERLAP</span>
+          <div style="display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center;">
+            <span class="tag tag-neutral" style="font-size: 14px;">files intact</span>
+            <span class="tag tag-neutral" style="font-size: 14px;">signal valid</span>
+            <span class="tag" style="{{ clockChipStyle }}" onClick="{{ toggleUndisciplined }}">{{ clockChipLabel }}</span>
+            <span class="tag tag-neutral" style="font-size: 14px;">≥ {{ minOverlapLabel }}</span>
+            <button type="button" class="btn btn-ghost" style="font-size: 16px; padding: 2px 6px;" onClick="{{ bumpMinOverlap }}">change threshold</button>
+          </div>
+        </div>
+      </div>
+
+      <aside class="scroll" style="width: 322px; flex: none; border-left: 1px solid var(--color-divider); overflow-y: auto; padding: var(--space-4) var(--space-4) 60px; display: flex; flex-direction: column; gap: var(--space-4);">
+        <div>
+          <div class="mono" style="font-size: 14px; letter-spacing: 0.09em; color: var(--color-neutral-500); text-transform: uppercase; margin-bottom: var(--space-2);">{{ inspectorKicker }}</div>
+          <div style="font-family: var(--font-heading); font-size: 23px; line-height: 1.25;">{{ inspectorTitle }}</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: var(--space-2);">
+            <sc-for list="{{ inspectorBadges }}" as="b" hint-placeholder-count="3">
+              <span class="tag" style="{{ b.style }}">{{ b.text }}</span>
+            </sc-for>
+          </div>
+        </div>
+
+        <sc-if value="{{ hasInspectorNote }}" hint-placeholder-val="{{ false }}">
+          <div style="padding: var(--space-3); border-left: 2px solid var(--color-accent); background: var(--color-accent-900); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: 17px; line-height: 1.5; color: var(--color-neutral-300);">{{ inspectorNote }}</div>
+        </sc-if>
+
+        <div style="display: flex; flex-direction: column;">
+          <sc-for list="{{ inspectorRows }}" as="r" hint-placeholder-count="8">
+            <div style="display: grid; grid-template-columns: 106px 1fr; gap: var(--space-3); padding: 5px 0; border-bottom: 1px solid var(--color-divider); font-size: 17px; align-items: baseline;">
+              <span class="mono" style="font-size: 14px; letter-spacing: 0.03em; text-transform: uppercase; color: var(--color-neutral-500);">{{ r.label }}</span>
+              <span class="mono" style="font-size: 16.5px; color: var(--color-neutral-200); line-height: 1.45;">{{ r.value }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ showEditor }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: var(--space-3); padding-top: var(--space-2);">
+            <div class="mono" style="font-size: 14px; letter-spacing: 0.09em; color: var(--color-accent); text-transform: uppercase;">Human judgement — yours to set</div>
+            <div class="field">
+              <label>Publish state</label>
+              <div class="seg" style="width: 100%;">
+                <sc-for list="{{ publishOpts }}" as="o" hint-placeholder-count="3">
+                  <label class="seg-opt" style="{{ o.style }}"><input type="radio" name="pub" checked="{{ o.checked }}" onChange="{{ o.set }}">{{ o.label }}</label>
+                </sc-for>
+              </div>
+            </div>
+            <label class="radio" style="font-size: 17px;">
+              <input type="checkbox" checked="{{ selDisputed }}" onChange="{{ toggleDisputed }}"><span class="dot"></span>Disputed / needs review
+            </label>
+            <div class="field">
+              <label>Dispute note</label>
+              <textarea class="input" style="min-height: 54px; font-size: 17px;" value="{{ selDisputeNote }}" onChange="{{ setDisputeNote }}" placeholder="What looks wrong, without deleting the record"></textarea>
+            </div>
+            <div class="field">
+              <label>Signal-processing conclusion</label>
+              <textarea class="input" style="min-height: 54px; font-size: 17px;" value="{{ selConclusion }}" onChange="{{ setConclusion }}" placeholder="Plain language, at the record it applies to"></textarea>
+            </div>
+            <div style="padding: var(--space-3); border: 1px solid var(--color-neutral-800); border-radius: var(--radius-sm); font-size: 16.5px; line-height: 1.5; color: var(--color-neutral-400);">
+              <div class="mono" style="font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-neutral-500); margin-bottom: 4px;">Scanner-owned — locked</div>
+              start · end · status · checkMethod · fileCount · sampleRate · clockQuality. You chose <span class="mono" style="color: var(--color-accent-300);">scanner wins</span>, so edits to these would be replaced at the next scan. Dispute them instead.
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ showAddEvent }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--color-divider);">
+            <div class="mono" style="font-size: 14px; letter-spacing: 0.09em; color: var(--color-accent); text-transform: uppercase;">Add event</div>
+            <div class="field"><label>Time (UTC)</label><input class="input" style="font-size: 17px;" placeholder="2024-08-02T05:45:00" value="{{ newEvtTime }}" onChange="{{ setNewEvtTime }}"></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2);">
+              <div class="field"><label>Source</label><select class="input" style="font-size: 17px;" value="{{ newEvtSource }}" onChange="{{ setNewEvtSource }}"><option value="ams">ams</option><option value="nasa_allsky">nasa_allsky</option><option value="skycam_spot">skycam_spot</option><option value="launch">launch</option></select></div>
+              <div class="field"><label>Uncertainty basis</label><select class="input" style="font-size: 17px;" value="{{ newEvtBasis }}" onChange="{{ setNewEvtBasis }}"><option value="reported_precision">reported_precision</option><option value="instrumental_fit">instrumental_fit</option><option value="analyst_estimate">analyst_estimate</option><option value="unknown">unknown</option></select></div>
+            </div>
+            <div class="field"><label>{{ uncLabel }}</label><input class="input" style="font-size: 17px;" placeholder="90" value="{{ newEvtUnc }}" onChange="{{ setNewEvtUnc }}" disabled="{{ uncDisabled }}"></div>
+            <div class="field"><label>Label</label><input class="input" style="font-size: 17px;" placeholder="AMS 3901d · SC · mag −13" value="{{ newEvtLabel }}" onChange="{{ setNewEvtLabel }}"></div>
+            <button type="button" class="btn btn-primary btn-block" style="font-size: 17px;" onClick="{{ addEvent }}">Add to local edits</button>
+          </div>
+        </sc-if>
+
+        <div style="padding-top: var(--space-3); border-top: 1px solid var(--color-divider);">
+          <div class="mono" style="font-size: 14px; letter-spacing: 0.09em; color: var(--color-neutral-500); text-transform: uppercase; margin-bottom: var(--space-3);">Legend</div>
+          <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+            <sc-for list="{{ legendGroups }}" as="g" hint-placeholder-count="4">
+              <div>
+                <div style="font-size: 16px; color: var(--color-neutral-400); margin-bottom: 5px;">{{ g.name }}</div>
+                <div style="display: flex; flex-direction: column; gap: 3px;">
+                  <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="4">
+                    <div style="display: flex; align-items: center; gap: var(--space-2); font-size: 16px; color: var(--color-neutral-300);">
+                      <span style="flex: none; width: 64px; height: 20px;">{{ i.swatch }}</span>
+                      <span>{{ i.label }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isCampaign }}" hint-placeholder-val="{{ false }}">
+    <div class="scroll" style="flex: 1; overflow-y: auto; padding: var(--space-6) var(--space-6) 60px;">
+      <div style="display: flex; align-items: baseline; gap: var(--space-4); margin-bottom: var(--space-4); flex-wrap: wrap;">
+        <h4 style="margin: 0; font-size: 27px;">Campaign yield</h4>
+        <span class="mono" style="font-size: 16px; color: var(--color-neutral-500);">26 Jul – 9 Sep 2024 · 45 days · {{ recordCountLabel }}</span>
+        <span class="mono" style="font-size: 16px; color: var(--color-accent-300); margin-left: auto;">{{ overlapHeadline }}</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-8);">
+        <sc-for list="{{ statCards }}" as="s" hint-placeholder-count="6">
+          <div class="card elev-sm" style="padding: var(--space-4); gap: 3px;">
+            <div class="mono" style="font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-neutral-500);">{{ s.label }}</div>
+            <div class="mono" style="font-family: var(--font-heading); font-size: 36px; line-height: 1.1; color: var(--color-text);">{{ s.value }}</div>
+            <div style="font-size: 16px; color: var(--color-neutral-400); line-height: 1.4;">{{ s.note }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display: flex; align-items: baseline; gap: var(--space-4); margin-bottom: var(--space-3); flex-wrap: wrap;">
+        <h5 style="margin: 0; font-size: 22px;">Whole campaign as a timeline</h5>
+        <span style="font-size: 16.5px; color: var(--color-neutral-500);">Truthful about duration; a 20-minute window is a hairline. Click to open it in the Timeline view.</span>
+      </div>
+      <div style="margin-bottom: var(--space-8);">{{ campaignStripEl }}</div>
+
+      <div style="display: flex; align-items: baseline; gap: var(--space-4); margin-bottom: var(--space-3); flex-wrap: wrap;">
+        <h5 style="margin: 0; font-size: 22px;">Whole campaign as a day × hour matrix</h5>
+        <span style="font-size: 16.5px; color: var(--color-neutral-500);">Carried forward from the sheet’s per-instrument tabs. Equal weight per hour, so short windows stay findable — but duration is lost.</span>
+        <div class="seg" style="margin-left: auto;">
+          <sc-for list="{{ matrixModes }}" as="m" hint-placeholder-count="3">
+            <label class="seg-opt" style="{{ m.style }}"><input type="radio" name="mmode" checked="{{ m.checked }}" onChange="{{ m.set }}">{{ m.label }}</label>
+          </sc-for>
+        </div>
+      </div>
+      <div class="scroll" style="overflow-x: auto; padding-bottom: var(--space-3);">{{ matrixEl }}</div>
+      <p style="max-width: 82ch; font-size: 18.5px; line-height: 1.6; color: var(--color-neutral-400); margin-top: var(--space-4);">Both are above so you can judge §12’s open question. My read: keep the matrix, but as the campaign-scale overview only — it is the fastest way to see a six-week shape and the only view where a lone 20-minute window is as loud as a 20-hour one. It cannot express duration, overlap, or uncertainty, so it should hand off to the timeline on click rather than try to carry quality.</p>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isRecords }}" hint-placeholder-val="{{ false }}">
+    <div style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+      <div style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-6); border-bottom: 1px solid var(--color-divider); flex-wrap: wrap; flex: none;">
+        <input class="input" style="width: 260px; font-size: 17px;" placeholder="Search label, id, instrument…" value="{{ query }}" onInput="{{ setQuery }}">
+        <div class="seg">
+          <sc-for list="{{ kindFilters }}" as="k" hint-placeholder-count="4">
+            <label class="seg-opt" style="{{ k.style }}"><input type="radio" name="kindf" checked="{{ k.checked }}" onChange="{{ k.set }}">{{ k.label }}</label>
+          </sc-for>
+        </div>
+        <label class="radio" style="font-size: 17px; color: var(--color-neutral-400);">
+          <input type="checkbox" checked="{{ publishedOnly }}" onChange="{{ togglePublishedOnly }}"><span class="dot"></span>Published only
+        </label>
+        <span class="mono" style="font-size: 16px; color: var(--color-neutral-500);">{{ tableCountLabel }}</span>
+        <div style="display: flex; gap: var(--space-2); margin-left: auto;">
+          <button type="button" class="btn btn-secondary" style="font-size: 16.5px;" onClick="{{ exportCsv }}">Export CSV</button>
+          <button type="button" class="btn btn-secondary" style="font-size: 16.5px;" onClick="{{ exportJson }}">Export JSON</button>
+        </div>
+      </div>
+      <div class="scroll" style="flex: 1; overflow: auto; padding: 0 var(--space-6) 40px;">
+        <table class="table" style="font-size: 17px;">
+          <thead style="position: sticky; top: 0; background: var(--color-bg); z-index: 2;">
+            <tr>
+              <sc-for list="{{ tableCols }}" as="c" hint-placeholder-count="7">
+                <th style="{{ c.style }}" onClick="{{ c.sort }}">{{ c.label }}</th>
+              </sc-for>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{ tableRows }}" as="r" hint-placeholder-count="12">
+              <tr style="{{ r.style }}" onClick="{{ r.select }}">
+                <td class="mono" style="font-size: 15.5px; color: var(--color-neutral-500);">{{ r.id }}</td>
+                <td><span class="tag" style="{{ r.kindStyle }}">{{ r.kind }}</span></td>
+                <td class="mono" style="font-size: 16.5px;">{{ r.subject }}</td>
+                <td class="mono" style="font-size: 16.5px; white-space: nowrap;">{{ r.start }}</td>
+                <td class="mono" style="font-size: 16.5px; white-space: nowrap; color: var(--color-neutral-400);">{{ r.extent }}</td>
+                <td class="mono" style="font-size: 16.5px; color: var(--color-neutral-400);">{{ r.quality }}</td>
+                <td style="color: var(--color-neutral-300);">{{ r.label }}</td>
+                <td class="mono" style="font-size: 15.5px; color: var(--color-neutral-500);">{{ r.provenance }}</td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light' | 'dark'&quot;,&quot;section&quot;:&quot;Appearance&quot;},&quot;entry&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;analyst&quot;,&quot;reporting&quot;],&quot;default&quot;:&quot;analyst&quot;,&quot;tsType&quot;:&quot;'analyst' | 'reporting'&quot;,&quot;section&quot;:&quot;Entry point&quot;},&quot;minOverlapMin&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1,&quot;min&quot;:1,&quot;max&quot;:60,&quot;step&quot;:1,&quot;unit&quot;:&quot;min&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Overlap filter&quot;},&quot;includeUndisciplined&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Overlap filter&quot;},&quot;publishedOnly&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Public view&quot;}}">
+const H = 3600e3, M = 60e3, S = 1000;
+const p2 = (n) => String(n).padStart(2, '0');
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function fmt(ms, prec) {
+  const d = new Date(ms);
+  const day = `${d.getUTCFullYear()}-${p2(d.getUTCMonth() + 1)}-${p2(d.getUTCDate())}`;
+  if (prec === 'day') return day;
+  const t = `${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}`;
+  if (prec === 'min') return `${day} ${t}`;
+  return `${day} ${t}:${p2(d.getUTCSeconds())}`;
+}
+function dur(sec) {
+  sec = Math.round(sec);
+  if (sec < 90) return sec + ' s';
+  if (sec < 5400) return (sec / 60).toFixed(sec < 600 ? 1 : 0) + ' min';
+  if (sec < 172800) return (sec / 3600).toFixed(sec < 36000 ? 1 : 0) + ' h';
+  return (sec / 86400).toFixed(1) + ' d';
+}
+function dayLabel(ms) {
+  const d = new Date(ms);
+  return `${DOW[d.getUTCDay()]} ${d.getUTCDate()} ${MON[d.getUTCMonth()]}`;
+}
+function merge(list) {
+  const s = list.slice().sort((a, b) => a[0] - b[0]), out = [];
+  for (const iv of s) {
+    const last = out[out.length - 1];
+    if (last && iv[0] <= last[1]) last[1] = Math.max(last[1], iv[1]);
+    else out.push([iv[0], iv[1]]);
+  }
+  return out;
+}
+
+class Component extends DCLogic {
+  state = {
+    ds: null, view: 'timeline', vs: 0, ve: 0, width: 1100,
+    plotH: 460, expanded: {}, hoverId: null, selId: null, manage: false, greyscale: false,
+    minOverlapMin: null, includeUnd: null, publishedOnly: null,
+    matrixMode: 'coverage', query: '', kindFilter: 'all', sortKey: 'start', sortDir: 1,
+    pending: {}, newEvt: { time: '', source: 'ams', basis: 'reported_precision', unc: '', label: '' }
+  };
+
+  componentDidMount() {
+    this.plotRef = React.createRef();
+    this.applyTheme();
+    import('./campaign-data.js').then(async (m) => {
+      // Assigned before the dataset is awaited, not after. These are pure functions that owe
+      // nothing to the data, and a render landing between the two throws on this.solar. With a
+      // synchronous dataset that window was too small to hit; fetching a few megabytes over the
+      // network opened it wide.
+      this.solar = m.solarAltitude;
+      this.moon = m.moonIllumination;
+      const ds = await m.loadDataset();
+      this.nights = this.computeNights(ds.campaign);
+      const entry = this.props.entry ?? 'analyst';
+      const view = entry === 'reporting' ? 'campaign' : 'timeline';
+      this.setState({ ds, view, vs: ds.campaign.start, ve: ds.campaign.end });
+    });
+    try {
+      const raw = localStorage.getItem('ionosphere.pending.v1');
+      if (raw) this.setState({ pending: JSON.parse(raw) });
+    } catch (e) { /* first run */ }
+    this.ro = new ResizeObserver(() => this.measure());
+    this._roTimer = setInterval(() => {
+      const el = this.plotRef && this.plotRef.current;
+      if (el && !this._observed) { this.ro.observe(el); this._observed = true; }
+    }, 300);
+    this._up = () => { this._drag = null; };
+    this._move = (e) => this.onWindowMove(e);
+    window.addEventListener('mouseup', this._up);
+    window.addEventListener('mousemove', this._move);
+
+    // React registers its wheel listener passively, so preventDefault() inside an onWheel handler
+    // is ignored: the surface zoomed AND the document scrolled underneath, and the console filled
+    // with "Unable to preventDefault inside passive event listener". Cancelling the scroll needs a
+    // listener we attach ourselves, non-passive. The zoom itself stays in the React handlers.
+    this._wheelBlock = (ev) => ev.preventDefault();
+    this._wheelBound = new WeakSet();
+  }
+
+  /** Ref callback: give a zoomable surface a non-passive wheel listener, once. */
+  bindWheel(el) {
+    if (!el || !this._wheelBound || this._wheelBound.has(el)) return;
+    this._wheelBound.add(el);
+    el.addEventListener('wheel', this._wheelBlock, { passive: false });
+  }
+  // Self-healing width: a bad measurement (0, or a clone rendered off-layout)
+  // would otherwise mis-scale every chart until the next resize event.
+  measure() {
+    const el = this.plotRef && this.plotRef.current;
+    if (!el) return;
+    // clientHeight includes padding; the SVG lays out in the content box, so
+    // measuring the padded value made the chart taller than its own pane.
+    const cs = getComputedStyle(el);
+    const w = el.clientWidth;
+    const h = el.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
+    const patch = {};
+    if (w > 200 && w < 6000 && Math.abs(w - this.state.width) > 1) patch.width = w;
+    if (h > 160 && h < 4000 && Math.abs(h - this.state.plotH) > 2) patch.plotH = h;
+    if (Object.keys(patch).length) this.setState(patch);
+  }
+  componentDidUpdate() {
+    clearTimeout(this._mt);
+    this._mt = setTimeout(() => this.measure(), 120);
+  }
+  componentWillUnmount() {
+    clearInterval(this._roTimer);
+    clearTimeout(this._mt);
+    if (this.ro) this.ro.disconnect();
+    window.removeEventListener('mouseup', this._up);
+    window.removeEventListener('mousemove', this._move);
+  }
+
+  // ── config ────────────────────────────────────────────────────────────────
+  get cfg() {
+    const s = this.state;
+    return {
+      minOverlapSec: (s.minOverlapMin ?? this.props.minOverlapMin ?? 1) * 60,
+      // Defaults to including clocks we cannot vouch for. Nothing in the season record states
+      // clock discipline, so every record reads 'unknown'; excluding those by default made the
+      // overlap headline read 0 h across a season with 45 days of concurrent recording. The
+      // chip says which way this is set, and clicking it tightens the filter to disciplined only.
+      includeUnd: s.includeUnd ?? this.props.includeUndisciplined ?? true,
+      publishedOnly: s.publishedOnly ?? this.props.publishedOnly ?? false
+    };
+  }
+  get light() { return (this.state.theme ?? this.props.theme ?? 'light') === 'light'; }
+  // Called at the top of every render: the DOM class and the resolved-token
+  // cache are both derived from state in the same pass that reads them, so a
+  // theme change can never leave JS-computed colors a render behind.
+  applyTheme() {
+    const lit = this.light;
+    if (this._appliedTheme === lit) return;
+    try { document.documentElement.classList.toggle('theme-light', lit); } catch (e) { /* noop */ }
+    this._appliedTheme = lit;
+    this._tok = null;
+  }
+  tok(name, fallback) {
+    if (!this._tok) this._tok = {};
+    if (this._tok[name] != null) return this._tok[name];
+    let v = '';
+    try { v = getComputedStyle(document.documentElement).getPropertyValue(name).trim(); } catch (e) { v = ''; }
+    this._tok[name] = v || fallback;
+    return this._tok[name];
+  }
+  // SVG fills are attributes, which cannot take var(), so the chart palette is
+  // a pure function of state — same Nocturne token values as styles.css and the
+  // .theme-light block above, resolved here with no DOM read and no cache.
+  get C() {
+    return this.light ? {
+      bg: '#f3f5fe', surface: '#edf0fb', text: '#292b31', accent: '#5d5294',
+      a300: '#423a6a', a400: '#5d5294', a500: '#796cbf', a700: '#b5abfc', a800: '#d2cefd', a900: '#e7e5fe',
+      // n500 and n600 collapse to one step here: the light ground sits much
+      // closer to the ramp's light end than the dark ground does to its dark
+      // end, so the mirrored #9397ab falls to 2.66:1. At the muted end of a
+      // light theme hierarchy comes from size, not another lighter grey.
+      n200: '#292b31', n300: '#3f424d', n400: '#595d6c', n500: '#75798c',
+      n600: '#75798c', n700: '#b2b6ca', n800: '#cfd3e5', n900: '#e4e7f5'
+    } : {
+      bg: '#161826', surface: '#232532', text: '#e9e9ed', accent: '#9184d9',
+      a300: '#d2cefd', a400: '#b5abfc', a500: '#968ae0', a700: '#5d5294', a800: '#423a6a', a900: '#2b2741',
+      n200: '#e4e7f5', n300: '#cfd3e5', n400: '#b2b6ca', n500: '#9397ab',
+      n600: '#75798c', n700: '#595d6c', n800: '#3f424d', n900: '#292b31'
+    };
+  }
+
+  computeNights(campaign) {
+    const out = [];
+    let t = campaign.start, prev = this.solar(t) < -6, open = prev ? t : null;
+    for (t += 10 * M; t <= campaign.end; t += 10 * M) {
+      const dark = this.solar(t) < -6;
+      if (dark && !prev) open = t;
+      if (!dark && prev && open != null) { out.push([open, t]); open = null; }
+      prev = dark;
+    }
+    if (open != null) out.push([open, campaign.end]);
+    return out;
+  }
+  nightOf(ms) {
+    for (const n of this.nights) if (ms >= n[0] - 12 * H && ms <= n[1] + 12 * H) {
+      if (ms >= n[0] && ms <= n[1]) return n;
+    }
+    let best = this.nights[0];
+    for (const n of this.nights) if (Math.abs((n[0] + n[1]) / 2 - ms) < Math.abs((best[0] + best[1]) / 2 - ms)) best = n;
+    return best;
+  }
+
+  // ── records, with local edits applied ─────────────────────────────────────
+  get records() {
+    const ds = this.state.ds;
+    if (!ds) return { coverage: [], events: [] };
+    const key = (this._pv || 0) + '|' + ds.meta.datasetVersion;
+    if (this._recKey === key) return this._recCache;
+    const pend = this.state.pending;
+    const apply = (r) => (pend[r.id] ? Object.assign({}, r, pend[r.id], { _edited: true }) : r);
+    const added = Object.keys(pend).filter((k) => pend[k]._added).map((k) => pend[k]);
+    this._recKey = key;
+    this._mergedCache = {};
+    this._hiKey = null;
+    this._ovKey = null;
+    this._recCache = {
+      coverage: ds.coverage.map(apply),
+      events: ds.events.map(apply).concat(added.filter((a) => a.recordKind === 'event'))
+    };
+    return this._recCache;
+  }
+  mergedFor(instId) {
+    this.records;
+    if (!this._mergedCache) this._mergedCache = {};
+    if (this._mergedCache[instId]) return this._mergedCache[instId];
+    const out = merge(this.records.coverage.filter((c) => c.instrumentId === instId).map((c) => [c.start, c.end]));
+    this._mergedCache[instId] = out;
+    return out;
+  }
+  // One pass over the records into hour bins — the matrix reads this instead of
+  // re-scanning every record per cell (5,400 cells × 1,000 records otherwise).
+  hourIndex() {
+    const ds = this.state.ds;
+    const key = this._recKey + '|' + this.cfg.includeUnd;
+    if (this._hiKey === key) return this._hi;
+    const hours = Math.round((ds.campaign.end - ds.campaign.start) / H);
+    const idx = {};
+    ds.instruments.forEach((i) => { idx[i.id] = { cov: new Float32Array(hours), use: new Float32Array(hours), flag: new Uint8Array(hours) }; });
+    this.records.coverage.forEach((c) => {
+      const slot = idx[c.instrumentId];
+      if (!slot || !(c.end > c.start)) return;
+      const usable = this.usable(c);
+      let fl = 0;
+      if (c.disputed) fl = 4;
+      else if (c.validation === 'invalid' || c.status === 'corrupt') fl = 3;
+      else if (c.lossSeverity !== 'none') fl = 2;
+      else if (c.validation === 'unchecked') fl = 1;
+      const h0 = Math.max(0, Math.floor((c.start - ds.campaign.start) / H));
+      const h1 = Math.min(hours, Math.ceil((c.end - ds.campaign.start) / H));
+      for (let h = h0; h < h1; h++) {
+        const s = ds.campaign.start + h * H;
+        const ov = Math.min(c.end, s + H) - Math.max(c.start, s);
+        if (ov <= 0) continue;
+        slot.cov[h] = Math.min(1, slot.cov[h] + ov / H);
+        if (usable) slot.use[h] = Math.min(1, slot.use[h] + ov / H);
+        if (fl > slot.flag[h]) slot.flag[h] = fl;
+      }
+    });
+    const ev = new Uint16Array(hours);
+    this.records.events.forEach((e) => {
+      if (e.eventSource === 'launch') return;
+      const h = Math.floor((e.start - ds.campaign.start) / H);
+      if (h >= 0 && h < hours) ev[h]++;
+    });
+    this._hiKey = key;
+    this._hi = { idx, ev, hours };
+    return this._hi;
+  }
+  usable(c) {
+    const okStatus = c.status === 'ok' || c.status === 'partial' || c.status === 'unknown';
+    const okVal = c.validation === 'valid';
+    const okClock = c.clockQuality === 'disciplined' || (this.cfg.includeUnd && c.clockQuality !== 'unsynced');
+    return okStatus && okVal && okClock && !c.disputed;
+  }
+  overlapSegments() {
+    // The key includes _recKey: without it the cache survived a change of records, so an overlap
+    // computed against an empty set — before the dataset finished loading — could be returned
+    // for the rest of the session while the lanes below showed coverage.
+    if (this._ovCache && this._ovKey === JSON.stringify([this._recKey, this.cfg, Object.keys(this.state.pending).length])) return this._ovCache;
+    void this.records;  // ensure the record cache, and so _recKey, is current before we key on it
+    const byInst = {};
+    for (const c of this.records.coverage) {
+      if (!this.usable(c)) continue;
+      (byInst[c.instrumentId] = byInst[c.instrumentId] || []).push([c.start, c.end, c.clockQuality]);
+    }
+    const marks = [];
+    Object.keys(byInst).forEach((id) => {
+      const free = byInst[id].some((iv) => iv[2] === 'free_running');
+      merge(byInst[id]).forEach(([a, b]) => { marks.push([a, 1, id, free]); marks.push([b, -1, id, free]); });
+    });
+    marks.sort((x, y) => x[0] - y[0] || x[1] - y[1]);
+    const segs = []; let depth = 0, at = null, contrib = new Set(), freeIn = false;
+    for (const [t, d, id, free] of marks) {
+      if (at != null && t > at && depth >= 2) segs.push({ start: at, end: t, depth, free: freeIn });
+      if (d > 0) { depth++; contrib.add(id); if (free) freeIn = true; }
+      else { depth--; contrib.delete(id); freeIn = Array.from(contrib).length > 0 ? freeIn : false; }
+      at = t;
+    }
+    const min = this.cfg.minOverlapSec * 1000;
+    const out = segs.filter((s) => s.end - s.start >= min);
+    this._ovKey = JSON.stringify([this._recKey, this.cfg, Object.keys(this.state.pending).length]);
+    this._ovCache = out;
+    return out;
+  }
+
+  // ── view math ─────────────────────────────────────────────────────────────
+  get span() { return this.state.ve - this.state.vs; }
+  setSpan(span, center) {
+    const ds = this.state.ds; if (!ds) return;
+    const full = ds.campaign.end - ds.campaign.start;
+    span = Math.max(10 * S, Math.min(full, span));
+    // Fully zoomed out, sit exactly on the campaign instead of centring on wherever the view
+    // happened to be. Centring left the window overhanging one end of the season and short of
+    // the other, so the last days could not be brought on screen at any zoom level.
+    if (span >= full) return this.setState({ vs: ds.campaign.start, ve: ds.campaign.end });
+    const c = center != null ? center : (this.state.vs + this.state.ve) / 2;
+    this.setState({ vs: c - span / 2, ve: c + span / 2 });
+  }
+  panTo(center, span) {
+    const sp = span || this.span;
+    this.setState({ vs: center - sp / 2, ve: center + sp / 2 });
+  }
+
+  // ── shared SVG bits ──────────────────────────────────────────────────────
+  e(tag, props, kids) { return React.createElement(tag, props, kids); }
+
+  /** Approximate rendered width of a label, in pixels. */
+  textWidth(text, fontSize) { return String(text || '').length * fontSize * 0.55; }
+
+  /** Clip a label to the width available, since SVG text will happily overrun its neighbour. */
+  fitText(text, maxPx, fontSize) {
+    const s = String(text || '');
+    if (!s || maxPx <= 0) return '';
+    const max = Math.floor(maxPx / (fontSize * 0.55));
+    return s.length <= max ? s : s.slice(0, Math.max(1, max - 1)) + '…';
+  }
+  defs() {
+    const C = this.C;
+    return this.e('defs', { key: 'defs' }, [
+      this.e('pattern', { key: 'h', id: 'p-hatch', width: 5, height: 5, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, [
+        this.e('rect', { key: 'b', width: 5, height: 5, fill: C.n900 }),
+        this.e('line', { key: 'l', x1: 0, y1: 0, x2: 0, y2: 5, stroke: C.n500, strokeWidth: 1.6 })
+      ]),
+      this.e('pattern', { key: 'd', id: 'p-dots', width: 4, height: 4, patternUnits: 'userSpaceOnUse' }, [
+        this.e('rect', { key: 'b', width: 4, height: 4, fill: C.a900 }),
+        this.e('circle', { key: 'c', cx: 1.4, cy: 1.4, r: 0.9, fill: C.a400 })
+      ]),
+      this.e('pattern', { key: 'l', id: 'p-light', width: 6, height: 6, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(-45)' }, [
+        this.e('line', { key: 'l', x1: 0, y1: 0, x2: 0, y2: 6, stroke: C.n600, strokeWidth: 1.2, opacity: 0.85 })
+      ]),
+      this.e('pattern', { key: 'i', id: 'p-int', width: 4, height: 4, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, [
+        this.e('line', { key: 'l', x1: 0, y1: 0, x2: 0, y2: 4, stroke: C.n700, strokeWidth: 1.4 })
+      ]),
+      this.e('linearGradient', { key: 'g', id: 'g-ongoing', x1: '0', x2: '1' }, [
+        this.e('stop', { key: 'a', offset: '0', stopColor: C.a700, stopOpacity: 1 }),
+        this.e('stop', { key: 'b', offset: '1', stopColor: C.a700, stopOpacity: 0 })
+      ])
+    ]);
+  }
+  skyBands(x, w, t0, t1, y, h, step) {
+    // The first render happens before the data module has loaded, so the solar function may not
+    // exist yet. Draw nothing for one frame rather than throw: an exception here takes the whole
+    // render down, which is why a missing sky strip showed up as an empty header and a banner
+    // stuck on its hardcoded default.
+    if (typeof this.solar !== 'function') return [];
+    const C = this.C, out = [];
+    // Daylight is always the lighter end of the ramp, whichever ground we are on.
+    const col = this.light
+      ? (a) => a > 0 ? C.n900 : a > -6 ? C.n800 : a > -12 ? C.n700 : a > -18 ? C.n600 : C.n500
+      : (a) => a > 0 ? C.n600 : a > -6 ? C.n700 : a > -12 ? C.n800 : a > -18 ? C.n900 : C.bg;
+    const n = Math.max(1, Math.floor(w / (step || 2)));
+    for (let i = 0; i < n; i++) {
+      const t = t0 + ((t1 - t0) * i) / n;
+      out.push(this.e('rect', { key: 'sk' + i, x: x + (w * i) / n, y, width: w / n + 0.6, height: h, fill: col(this.solar(t)) }));
+    }
+    return out;
+  }
+
+  // ── campaign ribbon: the always-present frame ────────────────────────────
+  ribbon(width) {
+    const ds = this.state.ds, C = this.C;
+    if (!ds) return null;
+    const L = 138, W = Math.max(240, width - L - 8), h = 100;
+    const t0 = ds.campaign.start, t1 = ds.campaign.end;
+    const x = (t) => L + ((t - t0) / (t1 - t0)) * W;
+    const kids = [this.defs()];
+
+    kids.push(this.e('text', { key: 'lb', x: 0, y: 20, fontSize: 14.5, fill: C.n500, letterSpacing: 0.6 }, 'WHOLE CAMPAIGN'));
+    kids.push(this.e('text', { key: 'lb2', x: 0, y: 37, fontSize: 14.5, fill: C.n600 }, '45 days'));
+
+    kids.push(...this.skyBands(L, W, t0, t1, 26, 10, 1));
+    kids.push(this.e('text', { key: 'skl', x: 0, y: 56, fontSize: 13.5, fill: C.n600 }, 'day/night'));
+
+    // per-instrument coverage density rows
+    const rows = ds.instruments;
+    const rh = 5.8;
+    rows.forEach((inst, i) => {
+      const y = 40 + i * (rh + 1.6);
+      kids.push(this.e('rect', { key: 'rb' + i, x: L, y, width: W, height: rh, fill: C.n900 }));
+      const ivs = this.mergedFor(inst.id);
+      ivs.forEach(([a, b], j) => kids.push(this.e('rect', {
+        key: 'r' + i + '_' + j, x: x(a), y, width: Math.max(0.7, x(b) - x(a)), height: rh, fill: C.a700
+      })));
+    });
+
+    // event density sparkline
+    const bins = 180, counts = new Array(bins).fill(0);
+    this.records.events.forEach((ev) => {
+      const k = Math.floor(((ev.start - t0) / (t1 - t0)) * bins);
+      if (k >= 0 && k < bins) counts[k]++;
+    });
+    const mx = Math.max(1, ...counts);
+    const sy = 40 + rows.length * (rh + 1.6) + 4, sh = 15;
+    counts.forEach((c, i) => {
+      if (!c) return;
+      const bh = Math.max(0.8, (c / mx) * sh);
+      kids.push(this.e('rect', { key: 'sp' + i, x: L + (W * i) / bins, y: sy + sh - bh, width: W / bins + 0.4, height: bh, fill: C.n600 }));
+    });
+    kids.push(this.e('text', { key: 'spl', x: 0, y: sy + 13, fontSize: 13.5, fill: C.n600 }, 'events/6 h'));
+
+    // shower markers — labels stagger so near-coincident peaks stay readable
+    let lastLabelX = -99, tier = 0;
+    ds.showers.forEach((sh2, i) => {
+      const px = x(sh2.peak);
+      kids.push(this.e('line', { key: 'sw' + i, x1: px, y1: 25, x2: px, y2: sy + sh, stroke: sh2.major ? C.accent : C.n700, strokeWidth: sh2.major ? 1.2 : 0.8, strokeDasharray: sh2.major ? '' : '2 2' }));
+      tier = px - lastLabelX < 78 ? 1 - tier : 0;
+      lastLabelX = px;
+      kids.push(this.e('text', { key: 'swt' + i, x: px + 5, y: tier ? 22 : 10, fontSize: 13.5, fill: sh2.major ? C.a300 : C.n600 }, sh2.name));
+    });
+
+    // viewport brush
+    const bx1 = x(Math.max(t0, this.state.vs)), bx2 = x(Math.min(t1, this.state.ve));
+    const bw = Math.max(1.5, bx2 - bx1);
+    kids.push(this.e('rect', { key: 'bmask1', x: L, y: 25, width: Math.max(0, bx1 - L), height: sy + sh - 25, fill: C.bg, opacity: 0.62 }));
+    kids.push(this.e('rect', { key: 'bmask2', x: bx2, y: 25, width: Math.max(0, L + W - bx2), height: sy + sh - 25, fill: C.bg, opacity: 0.62 }));
+    kids.push(this.e('rect', { key: 'brush', x: bx1 - (bw < 3 ? 1.5 : 0), y: 24, width: bw < 3 ? 3 : bw, height: sy + sh - 23, fill: 'none', stroke: C.accent, strokeWidth: 1.2 }));
+    kids.push(this.e('path', { key: 'bh', d: `M${bx1 - 5} 22 L${bx1 + 5} 22 M${bx2 - 5} 22 L${bx2 + 5} 22`, stroke: C.accent, strokeWidth: 2 }));
+
+    // day ticks
+    for (let t = t0; t <= t1; t += 7 * 24 * H) {
+      kids.push(this.e('text', { key: 'dt' + t, x: x(t), y: h - 3, fontSize: 13.5, fill: C.n500, textAnchor: 'middle' }, fmt(t, 'day').slice(5)));
+    }
+
+    return this.e('svg', {
+      width: '100%', height: h, viewBox: `0 0 ${L + W + 8} ${h}`, style: { display: 'block', cursor: 'pointer' },
+      ref: (el) => this.bindWheel(el),
+      // el and vbw are what onWindowMove measures against; without them a ribbon drag threw on
+      // the first mousemove. The context band below always passed them, the ribbon never did.
+      onMouseDown: (ev) => {
+        this._drag = { kind: 'ribbon', el: ev.currentTarget, vbw: L + W + 8, L, W, t0, t1 };
+        this.ribbonSeek(ev, L, W, t0, t1);
+      },
+      onWheel: (ev) => { this.setSpan(this.span * (ev.deltaY > 0 ? 1.25 : 0.8)); }
+    }, kids);
+  }
+  ribbonSeek(ev, L, W, t0, t1) {
+    const r = ev.currentTarget.getBoundingClientRect();
+    const scale = (L + W + 8) / r.width;
+    const px = (ev.clientX - r.left) * scale;
+    const t = t0 + ((px - L) / W) * (t1 - t0);
+    this.panTo(Math.max(t0, Math.min(t1, t)));
+  }
+  onWindowMove(ev) {
+    const d = this._drag;
+    if (!d) return;
+    if (d.kind === 'ribbon' || d.kind === 'context') {
+      if (!d.el) return;  // nothing to measure against; a dead drag beats a thrown render
+      const r = d.rect || (d.rect = d.el.getBoundingClientRect());
+      const scale = d.vbw / r.width;
+      const px = (ev.clientX - r.left) * scale;
+      const t = d.t0 + ((px - d.L) / d.W) * (d.t1 - d.t0);
+      this.panTo(Math.max(d.t0, Math.min(d.t1, t)));
+    } else if (d.kind === 'pan') {
+      const dt = ((d.x - ev.clientX) / d.plotW) * d.span;
+      this.setState({ vs: d.vs + dt, ve: d.ve + dt });
+    }
+  }
+
+  // ── context band: the intermediate frame ─────────────────────────────────
+  contextBand(width) {
+    const ds = this.state.ds, C = this.C;
+    if (!ds) return null;
+    const L = 138, W = Math.max(240, width - L - 8), h = 50;
+    const factor = 18;
+    let sp = this.span * factor;
+    const camp = ds.campaign.end - ds.campaign.start;
+    if (sp > camp * 0.85) return null;
+    const c = (this.state.vs + this.state.ve) / 2;
+    let t0 = c - sp / 2, t1 = c + sp / 2;
+    if (t0 < ds.campaign.start) { t0 = ds.campaign.start; t1 = t0 + sp; }
+    if (t1 > ds.campaign.end) { t1 = ds.campaign.end; t0 = t1 - sp; }
+    const x = (t) => L + ((t - t0) / (t1 - t0)) * W;
+    const kids = [];
+    kids.push(this.e('text', { key: 'l1', x: 0, y: 17, fontSize: 14.5, fill: C.n500 }, 'CONTEXT'));
+    kids.push(this.e('text', { key: 'l2', x: 0, y: 34, fontSize: 14, fill: C.n600 }, dur(sp / 1000)));
+    kids.push(...this.skyBands(L, W, t0, t1, 4, 9, 2));
+    ds.instruments.forEach((inst, i) => {
+      const y = 17 + i * 4.6;
+      merge(this.records.coverage.filter((cv) => cv.instrumentId === inst.id && cv.end > t0 && cv.start < t1).map((cv) => [cv.start, cv.end]))
+        .forEach(([a, b], j) => kids.push(this.e('rect', { key: 'c' + i + j, x: x(Math.max(a, t0)), y, width: Math.max(0.8, x(Math.min(b, t1)) - x(Math.max(a, t0))), height: 3.4, fill: C.a700 })));
+    });
+    this.records.events.filter((ev) => ev.start > t0 && ev.start < t1).forEach((ev, i) => {
+      kids.push(this.e('rect', { key: 'e' + i, x: x(ev.start), y: 17 + ds.instruments.length * 4.6 + 1, width: 0.9, height: 6, fill: C.n500 }));
+    });
+    // day boundaries with labels
+    const d0 = new Date(t0); d0.setUTCHours(0, 0, 0, 0);
+    const dayPx = (W / (t1 - t0)) * 24 * H;
+    const every = dayPx > 84 ? 1 : dayPx > 42 ? 2 : Math.ceil(84 / Math.max(dayPx, 1));
+    let di = 0;
+    for (let t = d0.getTime(); t <= t1; t += 24 * H, di++) {
+      if (t < t0) continue;
+      kids.push(this.e('line', { key: 'db' + t, x1: x(t), y1: 3, x2: x(t), y2: h - 14, stroke: C.n800, strokeWidth: 1 }));
+      if (di % every === 0) {
+        const dd = new Date(t);
+        kids.push(this.e('text', { key: 'dl' + t, x: x(t) + 4, y: h - 3, fontSize: 13.5, fill: C.n500 }, `${dd.getUTCDate()} ${MON[dd.getUTCMonth()]}`));
+      }
+    }
+    const bx1 = x(this.state.vs), bx2 = x(this.state.ve);
+    const bw = Math.max(2, bx2 - bx1);
+    kids.push(this.e('rect', { key: 'm1', x: L, y: 3, width: Math.max(0, bx1 - L), height: h - 17, fill: C.bg, opacity: 0.6 }));
+    kids.push(this.e('rect', { key: 'm2', x: bx2, y: 3, width: Math.max(0, L + W - bx2), height: h - 17, fill: C.bg, opacity: 0.6 }));
+    kids.push(this.e('rect', { key: 'br', x: bx1, y: 2, width: bw, height: h - 15, fill: 'none', stroke: C.accent, strokeWidth: 1.2 }));
+    return this.e('svg', {
+      width: '100%', height: h, viewBox: `0 0 ${L + W + 8} ${h}`, style: { display: 'block', cursor: 'pointer' },
+      ref: (el) => this.bindWheel(el),
+      onMouseDown: (ev) => {
+        this._drag = { kind: 'context', el: ev.currentTarget, vbw: L + W + 8, L, W, t0, t1 };
+        this.onWindowMove(ev);
+      },
+      onWheel: (ev) => { this.setSpan(this.span * (ev.deltaY > 0 ? 1.25 : 0.8)); }
+    }, kids);
+  }
+
+  // ── axis ticks ───────────────────────────────────────────────────────────
+  ticks(t0, t1) {
+    const span = t1 - t0;
+    const steps = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 2 * 3600, 3 * 3600, 6 * 3600, 12 * 3600, 86400, 2 * 86400, 7 * 86400];
+    let step = steps[steps.length - 1];
+    for (const s of steps) if (span / 1000 / s <= 11) { step = s; break; }
+    const ms = step * 1000, out = [];
+    for (let t = Math.ceil(t0 / ms) * ms; t <= t1; t += ms) {
+      const d = new Date(t);
+      let label;
+      if (step < 60) label = `${p2(d.getUTCMinutes())}:${p2(d.getUTCSeconds())}`;
+      else if (step < 3600) label = `${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}`;
+      else if (step < 86400) label = `${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}`;
+      else label = `${d.getUTCDate()} ${MON[d.getUTCMonth()]}`;
+      out.push({ t, label, major: step < 86400 && d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0 });
+    }
+    return { ticks: out, step };
+  }
+
+  laneRows() {
+    const ds = this.state.ds, rows = [];
+    ds.instruments.forEach((inst) => {
+      // An instrument only expands if the records actually distinguish its channels. Offering
+      // the control otherwise promises a resolution the data does not have.
+      const chans = inst.channels || [];
+      if (chans.length > 1 && this.state.expanded[inst.id]) {
+        chans.forEach((ch, i) => rows.push({ kind: 'chan', inst, ch, w: 1, first: i === 0 }));
+      } else {
+        // A collapsed row splits into per-channel sub-bands, so it earns extra
+        // height rather than squeezing three components into one row's worth.
+        rows.push({ kind: 'inst', inst, w: 1 + Math.max(0, chans.length - 1) * 0.38, first: true });
+      }
+    });
+    return rows;
+  }
+
+  // ── the main plot ────────────────────────────────────────────────────────
+  plot(width) {
+    const ds = this.state.ds, C = this.C;
+    if (!ds) return null;
+    const L = 198, W = Math.max(280, width - L - 12);
+    const t0 = this.state.vs, t1 = this.state.ve, span = t1 - t0;
+    const x = (t) => L + ((t - t0) / span) * W;
+    const clampX = (v) => Math.max(L - 2, Math.min(L + W + 2, v));
+    const hits = [];
+    const kids = [this.defs()];
+    const AX = 58, SKY = 20;
+    let y = AX;
+
+    // ── date tier + ticks
+    const { ticks, step } = this.ticks(t0, t1);
+    if (step < 86400) {
+      const d0 = new Date(t0); d0.setUTCHours(0, 0, 0, 0);
+      let seg = d0.getTime();
+      while (seg <= t1) {
+        const nx = seg + 24 * H;
+        const sx = Math.max(L, x(seg)), ex = Math.min(L + W, x(nx));
+        if (ex > L && sx < L + W) {
+          kids.push(this.e('rect', { key: 'ds' + seg, x: sx, y: 0, width: Math.max(0, ex - sx), height: 23, fill: 'none' }));
+          // Only label a day whose visible slice can hold the label — otherwise a
+          // day starting off-screen pins its label to the gutter and overprints
+          // the next one.
+          const txt = dayLabel(seg) + (span < 6 * H ? ' 2024' : '');
+          if (ex - sx > txt.length * 8.8 + 14) kids.push(this.e('text', { key: 'dt' + seg, x: sx + 6, y: 18, fontSize: 16.5, fill: C.n300, fontWeight: 500 }, txt));
+          if (x(seg) > L) kids.push(this.e('line', { key: 'dl' + seg, x1: x(seg), y1: 0, x2: x(seg), y2: 1e4, stroke: C.n800, strokeWidth: 1 }));
+        }
+        seg = nx;
+      }
+    } else {
+      kids.push(this.e('text', { key: 'yr', x: L + 5, y: 18, fontSize: 16.5, fill: C.n300 }, '2024'));
+    }
+    ticks.forEach((tk, i) => {
+      const tx = x(tk.t);
+      kids.push(this.e('line', { key: 'g' + i, x1: tx, y1: AX - 6, x2: tx, y2: 1e4, stroke: tk.major ? C.n800 : C.n900, strokeWidth: 1 }));
+      kids.push(this.e('text', { key: 't' + i, x: tx, y: 47, fontSize: 14.5, fill: C.n500, textAnchor: 'middle' }, tk.label));
+    });
+    kids.push(this.e('line', { key: 'axl', x1: 0, y1: AX - 1, x2: L + W, y2: AX - 1, stroke: C.n800, strokeWidth: 1 }));
+    kids.push(this.e('line', { key: 'gut', x1: L - 1, y1: 0, x2: L - 1, y2: 1e4, stroke: C.n800, strokeWidth: 1 }));
+
+    // ── sensitivity strip
+    kids.push(...this.skyBands(L, W, t0, t1, y, SKY, 2));
+    kids.push(this.e('text', { key: 'skl', x: 0, y: y + 10, fontSize: 14.5, fill: C.n400 }, 'Sky sensitivity'));
+    y += SKY + 8;
+
+    // ── coverage lanes: instruments and events split the free height evenly,
+    // so the chart fills its container instead of ending halfway down.
+    const rows = this.laneRows();
+    const OVH = 30, INTH = 20;
+    const chrome = AX + SKY + 8 + 8 + OVH + 6 + INTH + 5 + 12;
+    const free = Math.max(200, (this.state.plotH || 460) - chrome);
+    const laneBudget = free * 0.52, evBudget = free * 0.48;
+    const totalW = rows.reduce((a, r) => a + r.w, 0) || 1;
+    rows.forEach((r) => { r.h = Math.max(28, Math.min(150, (laneBudget / totalW) * r.w - 2)); });
+    const evh = Math.max(24, Math.min(110, evBudget / 4));
+    const capH = Math.max(5, Math.min(13, evh * 0.28));
+    const configs = ds.configs;
+    rows.forEach((row, ri) => {
+      const ry = y, rh = row.h;
+      kids.push(this.e('rect', { key: 'lb' + ri, x: 0, y: ry, width: L + W, height: rh, fill: ri % 2 ? C.text : 'none', opacity: ri % 2 ? 0.035 : 1 }));
+      const chanCount = (row.inst.channels || []).length;
+      const rawName = row.kind === 'inst'
+        ? row.inst.short + (chanCount > 1 ? '  ▸' + chanCount : '')
+        : (row.first ? row.inst.short : '') ;
+      const nameSize = row.kind === 'inst' ? 17 : 15;
+      // The first channel row prints the instrument name on the left and the channel name on the
+      // right, in the same gutter. SVG text neither wraps nor ellipsises, so a long instrument
+      // name just runs underneath the channel name. Reserve the channel label's room and clip.
+      const reserved = row.kind === 'chan' ? this.textWidth(row.ch.label, 14.5) + 12 : 0;
+      const name = this.fitText(rawName, L - 8 - reserved, nameSize);
+      kids.push(this.e('text', { key: 'ln' + ri, x: 0, y: ry + rh / 2 + 5.6, fontSize: nameSize, fill: row.kind === 'inst' ? C.n300 : C.n400, style: { cursor: 'pointer' } }, name));
+      if (row.kind === 'chan') {
+        kids.push(this.e('text', { key: 'lc' + ri, x: L - 8, y: ry + rh / 2 + 5.6, fontSize: 14.5, fill: C.n500, textAnchor: 'end' }, row.ch.label));
+      }
+      hits.push({ type: 'lane', x1: 0, x2: L - 2, y1: ry, y2: ry + rh, instId: row.inst.id });
+
+      // A collapsed instrument row splits into one sub-band per channel, so
+      // ch0 and ch1 never draw on top of each other.
+      // One band per channel, or a single unnamed band when the record has no channel breakdown.
+      const bands = row.kind === 'inst'
+        ? (chanCount ? row.inst.channels.map((ch) => ch.id) : [null])
+        : [row.ch.id];
+      const bh = (rh - 5) / bands.length;
+      const lh = Math.min(2.6, Math.max(1.3, bh * 0.32));
+      let kc = 0;
+      bands.forEach((chId, bi) => {
+      // A record with no channel belongs to the instrument as a whole: the season sheet logged
+      // operating hours per instrument, not per channel. Matching channel strictly meant every
+      // such record silently failed to draw, and the lane looked like downtime rather than like
+      // coverage recorded at a coarser resolution.
+      const list = this.records.coverage.filter((c) =>
+        c.instrumentId === row.inst.id && (!c.channel || c.channel === chId)
+        && c.end > t0 && c.start < t1);
+      list.forEach((c) => {
+        const ci = kc++;
+        const x1 = clampX(x(c.start)), x2 = clampX(x(c.end));
+        const w = Math.max(1.6, x2 - x1), by = ry + 2.5 + bi * bh;
+        let fill = C.a800, stroke = C.a500, dash = '';
+        if (c.validation === 'bad_looking') fill = 'url(#p-dots)';
+        else if (c.validation === 'invalid' || c.status === 'corrupt') { fill = 'url(#p-hatch)'; stroke = C.n500; }
+        else if (c.validation === 'unchecked') { fill = 'none'; stroke = C.n600; }
+        if (c.status === 'suspect' || c.disputed) { stroke = C.a300; dash = '3 2'; }
+        if (c.ongoing) fill = 'url(#g-ongoing)';
+        kids.push(this.e('rect', {
+          key: 'cv' + ri + '_' + ci, x: x1, y: by, width: w, height: bh, rx: 1.5,
+          fill, stroke, strokeWidth: this.state.hoverId === c.id || this.state.selId === c.id ? 2 : 1, strokeDasharray: dash
+        }));
+        hits.push({ type: 'rec', rec: c, x1: x1 - 2, x2: x1 + w + 2, y1: by - 1, y2: by + bh + 1 });
+
+        // daylight gating on optical coverage
+        if (row.inst.modality === 'optical') {
+          const dayIvs = [];
+          let cur = null;
+          for (let t = c.start; t <= c.end; t += Math.max(5 * M, span / 400)) {
+            const lit = this.solar(t) > -6;
+            if (lit && cur == null) cur = t;
+            if (!lit && cur != null) { dayIvs.push([cur, t]); cur = null; }
+          }
+          if (cur != null) dayIvs.push([cur, c.end]);
+          dayIvs.forEach(([a, b], k) => {
+            const ax = clampX(x(a)), bx2 = clampX(x(b));
+            if (bx2 - ax < 0.7) return;
+            kids.push(this.e('rect', { key: 'dl' + ri + ci + k, x: ax, y: by, width: bx2 - ax, height: bh, fill: 'url(#p-light)', opacity: 0.9 }));
+          });
+        }
+        // loss strip
+        if (c.lossSeverity !== 'none') {
+          kids.push(this.e('rect', {
+            key: 'ls' + ri + ci, x: x1, y: by + bh - lh - 0.4, width: w, height: lh,
+            fill: C.n300, opacity: c.lossSeverity === 'major' ? 0.95 : 0.55
+          }));
+          if (c.lossSeverity === 'minor') kids.push(this.e('line', {
+            key: 'ls2' + ri + ci, x1, y1: by + bh - lh / 2 - 0.4, x2: x1 + w, y2: by + bh - lh / 2 - 0.4,
+            stroke: C.bg, strokeWidth: Math.max(0.8, lh * 0.5), strokeDasharray: '2 3'
+          }));
+        }
+        // derived / assumed end
+        if (c.endBasis !== 'observed' && x2 < L + W) {
+          const u = Math.max(4, (c.endUncertaintySec * 1000 / span) * W);
+          kids.push(this.e('rect', { key: 'du' + ri + ci, x: x2, y: by + 1, width: u, height: bh - 2, fill: C.a900, stroke: C.a700, strokeWidth: 0.8, strokeDasharray: '2 2' }));
+          kids.push(this.e('text', { key: 'dua' + ri + ci, x: x2 + u + 2, y: by + bh - 2, fontSize: 14, fill: C.n500 }, '›'));
+        }
+        // free-running clock underline
+        if (c.clockQuality !== 'disciplined') {
+          kids.push(this.e('line', {
+            key: 'fr' + ri + ci, x1, y1: by + bh + 1.4, x2: x1 + w, y2: by + bh + 1.4,
+            stroke: c.clockQuality === 'free_running' ? C.n400 : C.n600, strokeWidth: 1.4, strokeDasharray: '1.5 2'
+          }));
+        }
+        // disputed glyph
+        if (c.disputed && w > 6 && bh > 7) kids.push(this.e('text', { key: 'dq' + ri + ci, x: x1 + 2, y: by + bh - 2, fontSize: 15.5, fill: C.a300, fontWeight: 600 }, '!'));
+        if (c._edited && w > 6) kids.push(this.e('circle', { key: 'ed' + ri + ci, cx: x1 + w - 3, cy: by + 2.5, r: 1.8, fill: C.accent }));
+        // A label only when the band is tall enough to hold it: in a collapsed
+        // multi-channel row the sub-bands are not, and stacked labels were
+        // overprinting each other. CW tracks the font, so clipping is honest.
+        const FSZ = 14.5, CW = 8.1;
+        if (w > 92 && bh >= 17 && c.label) {
+          const room = Math.floor((w - 16) / CW);
+          kids.push(this.e('text', { key: 'cl' + ri + ci, x: x1 + 5, y: by + bh / 2 + FSZ * 0.35, fontSize: FSZ, fill: C.n300 },
+            c.label.length > room ? c.label.slice(0, Math.max(1, room - 1)) + '…' : c.label));
+        }
+      });
+      });
+
+      // config-change boundaries
+      configs.filter((cf) => cf.instrumentId === row.inst.id && cf.start > t0 && cf.start < t1).forEach((cf, k) => {
+        kids.push(this.e('line', { key: 'cf' + ri + k, x1: x(cf.start), y1: ry + 1, x2: x(cf.start), y2: ry + rh - 1, stroke: C.a300, strokeWidth: 1.4 }));
+        kids.push(this.e('rect', { key: 'cfm' + ri + k, x: x(cf.start) - 2.5, y: ry + rh / 2 - 2.5, width: 5, height: 5, fill: C.a300, transform: `rotate(45 ${x(cf.start)} ${ry + rh / 2})` }));
+        hits.push({ type: 'rec', rec: cf, x1: x(cf.start) - 4, x2: x(cf.start) + 4, y1: ry, y2: ry + rh });
+      });
+      y += rh + 2;
+    });
+
+    // ── overlap lane
+    y += 8;
+    kids.push(this.e('text', { key: 'ovl', x: 0, y: y + 14, fontSize: 16.5, fill: C.a300 }, 'Overlap 2+'));
+    kids.push(this.e('text', { key: 'ovl2', x: 0, y: y + 28, fontSize: 14, fill: C.n600 }, 'usable only'));
+    const ovh = OVH;
+    kids.push(this.e('rect', { key: 'ovbg', x: L, y, width: W, height: ovh, fill: C.n900, opacity: 0.6 }));
+    const ovAll = this.overlapSegments();
+    const ovInView = ovAll.filter((s) => s.end > t0 && s.start < t1);
+    ovInView.forEach((s, i) => {
+      const x1 = clampX(x(s.start)), x2 = clampX(x(s.end));
+      const hh = s.depth >= 3 ? ovh - 4 : (ovh - 4) * 0.55;
+      kids.push(this.e('rect', {
+        key: 'ov' + i, x: x1, y: y + 2 + (ovh - 4 - hh), width: Math.max(1, x2 - x1), height: hh, rx: 1,
+        fill: s.free ? 'url(#p-hatch)' : C.a500, opacity: s.free ? 1 : 0.9
+      }));
+      if (s.depth >= 3 && x2 - x1 > 14) kids.push(this.e('text', { key: 'ovt' + i, x: x1 + 3, y: y + ovh - 6, fontSize: 13.5, fill: C.bg, fontWeight: 600 }, s.depth + '×'));
+      hits.push({ type: 'overlap', seg: s, x1, x2, y1: y, y2: y + ovh });
+    });
+    // An empty track and a grey bar look identical, so say which this is. "Nothing here" and
+    // "nothing in the record at all" are different facts and the reader cannot tell them apart
+    // from an unlabelled rail.
+    if (!ovInView.length) {
+      kids.push(this.e('text', {
+        key: 'ovnone', x: L + 8, y: y + ovh / 2 + 5, fontSize: 14, fill: C.n500,
+        style: { fontStyle: 'italic' }
+      }, ovAll.length
+        ? 'no 2+ overlap in this window'
+        : 'no usable overlap in the record — check the clock filter'));
+    }
+    y += ovh + 6;
+
+    // ── interference
+    kids.push(this.e('text', { key: 'itl', x: 0, y: y + 15, fontSize: 15.5, fill: C.n400 }, 'Interference'));
+    kids.push(this.e('line', { key: 'itr', x1: L, y1: y + 10, x2: L + W, y2: y + 10, stroke: C.n900, strokeWidth: 20 }));
+    const itInView = ds.interference.filter((it) => it.end > t0 && it.start < t1);
+    itInView.forEach((it, i) => {
+      const x1 = clampX(x(it.start)), x2 = clampX(x(it.end));
+      kids.push(this.e('rect', { key: 'it' + i, x: x1, y: y, width: Math.max(1.5, x2 - x1), height: 20, fill: 'url(#p-int)', stroke: C.n600, strokeWidth: 0.8 }));
+      hits.push({ type: 'rec', rec: it, x1, x2, y1: y, y2: y + 13 });
+    });
+    if (!itInView.length) {
+      kids.push(this.e('text', {
+        key: 'itnone', x: L + 8, y: y + 14, fontSize: 14, fill: C.n500,
+        style: { fontStyle: 'italic' }
+      }, ds.interference.length
+        ? 'none in this window'
+        : 'no interference records in this dataset'));
+    }
+    y += 28;
+
+    // ── events, one row per source
+    kids.push(this.e('line', { key: 'evr', x1: 0, y1: y - 4, x2: L + W, y2: y - 4, stroke: C.n800, strokeWidth: 1, strokeDasharray: '2 3' }));
+    const sources = [
+      { id: 'skycam_spot', label: 'Sky-cam spots' },
+      { id: 'nasa_allsky', label: 'NASA All Sky' },
+      { id: 'ams', label: 'AMS reports' },
+      { id: 'launch', label: 'Launches' }
+    ];
+    sources.forEach((src, si) => {
+      const ry = y + si * evh, cy = ry + evh / 2;
+      kids.push(this.e('text', { key: 'es' + si, x: 0, y: cy + 3.4, fontSize: 15.5, fill: C.n400 }, src.label));
+      kids.push(this.e('line', { key: 'eb' + si, x1: L, y1: cy, x2: L + W, y2: cy, stroke: C.n900, strokeWidth: 1 }));
+      const all = this.records.events.filter((ev) => ev.eventSource === src.id);
+      const evs = all.filter((ev) => ev.start > t0 - 14 * H && ev.start < t1 + 14 * H);
+      // Above a few hundred marks in view, individual brackets are meaningless
+      // overlapping hairlines — bin them and say so.
+      if (evs.length > 260) {
+        const bins = Math.min(360, Math.max(60, Math.round(W / 3)));
+        const counts = new Array(bins).fill(0);
+        all.forEach((ev) => {
+          const k = Math.floor(((ev.start - t0) / span) * bins);
+          if (k >= 0 && k < bins) counts[k]++;
+        });
+        const mx = Math.max(1, ...counts);
+        counts.forEach((c, i) => {
+          if (!c) return;
+          const bh = Math.max(1, (c / mx) * (evh - 8));
+          kids.push(this.e('rect', { key: 'ed' + si + i, x: L + (W * i) / bins, y: cy - bh / 2, width: Math.max(1, W / bins - 0.4), height: bh, fill: C.n600 }));
+        });
+        kids.push(this.e('text', { key: 'edl' + si, x: L + W - 2, y: ry + 11, fontSize: 13.5, fill: C.n600, textAnchor: 'end' },
+          `${evs.length} reports in view — binned; zoom in for uncertainty intervals`));
+        return;
+      }
+      evs.forEach((ev, ei) => {
+        let lo, hi, treat = 'interval';
+        if (ev.uncertaintyBasis === 'unknown' || ev.uncertaintySec == null) {
+          const n = this.nightOf(ev.start); lo = n[0]; hi = n[1]; treat = 'unknown';
+        } else {
+          const u = (ev.uncertaintyLowSec ?? ev.uncertaintySec) * 1000;
+          const u2 = (ev.uncertaintyHighSec ?? ev.uncertaintySec) * 1000;
+          lo = ev.start - u; hi = ev.start + u2;
+        }
+        if (hi < t0 || lo > t1) return;
+        const ax = clampX(x(lo)), bx = clampX(x(hi));
+        const wpx = bx - ax;
+        const sel = this.state.hoverId === ev.id || this.state.selId === ev.id;
+        const col = ev.disputed ? C.a300 : (sel ? C.n200 : C.n400);
+        if (treat === 'unknown') {
+          kids.push(this.e('line', { key: 'eu' + si + ei, x1: ax, y1: cy, x2: bx, y2: cy, stroke: col, strokeWidth: 1, strokeDasharray: '1 3' }));
+          kids.push(this.e('circle', { key: 'euc' + si + ei, cx: (ax + bx) / 2, cy, r: Math.min(9, capH), fill: 'none', stroke: col, strokeWidth: 1.3 }));
+          kids.push(this.e('text', { key: 'euq' + si + ei, x: (ax + bx) / 2, y: cy + 4.5, fontSize: 12, fill: col, textAnchor: 'middle' }, '?'));
+        } else if (ev.eventClass === 'launch') {
+          const cw = (ev.confoundWindowSec || 600) * 1000;
+          const cx2 = clampX(x(ev.start + cw));
+          if (ev.eventEnd) kids.push(this.e('line', { key: 'em' + si + ei, x1: ax, y1: cy - capH - 2, x2: clampX(x(ev.eventEnd)), y2: cy - capH - 2, stroke: C.n700, strokeWidth: 1, strokeDasharray: '2 4' }));
+          kids.push(this.e('rect', { key: 'ec' + si + ei, x: ax, y: cy - capH * 0.8, width: Math.max(2.5, cx2 - ax), height: capH * 1.6, fill: col, opacity: 0.9 }));
+          if (cx2 - ax > 40) kids.push(this.e('text', { key: 'ect' + si + ei, x: cx2 + 4, y: cy + 4.5, fontSize: 14, fill: C.n500 }, 'ionospheric window ≈10 min'));
+        } else {
+          const narrow = wpx < 4;
+          const w = narrow ? 4 : wpx;
+          const ax2 = narrow ? ax - 2 : ax;
+          kids.push(this.e('line', { key: 'ei' + si + ei, x1: ax2, y1: cy, x2: ax2 + w, y2: cy, stroke: col, strokeWidth: sel ? 2.4 : 1.5 }));
+          kids.push(this.e('line', { key: 'e1' + si + ei, x1: ax2, y1: cy - capH, x2: ax2, y2: cy + capH, stroke: col, strokeWidth: sel ? 2 : 1.2 }));
+          kids.push(this.e('line', { key: 'e2' + si + ei, x1: ax2 + w, y1: cy - capH, x2: ax2 + w, y2: cy + capH, stroke: col, strokeWidth: sel ? 2 : 1.2 }));
+          if (!narrow && wpx > 9) kids.push(this.e('rect', { key: 'e3' + si + ei, x: x(ev.start) - 1.1, y: cy - capH * 0.62, width: 2.2, height: capH * 1.24, fill: col }));
+          if (narrow) kids.push(this.e('text', { key: 'e4' + si + ei, x: ax2 + w / 2, y: cy - capH - 2, fontSize: 12, fill: C.n600, textAnchor: 'middle' }, '±'));
+          if (ev.disputed) kids.push(this.e('text', { key: 'e5' + si + ei, x: ax2 + w + 4, y: cy + 4.5, fontSize: 14.5, fill: C.a300, fontWeight: 600 }, '!'));
+        }
+        hits.push({ type: 'rec', rec: ev, x1: Math.min(ax, bx) - 3, x2: Math.max(ax, bx) + 3, y1: cy - 7, y2: cy + 7 });
+      });
+      if (span < 3 * H && evs.length <= 260) {
+        evs.filter((ev) => ev.start > t0 && ev.start < t1).slice(0, 14).forEach((ev, ei) => {
+          if (!ev.label) return;
+          kids.push(this.e('text', { key: 'el' + si + ei, x: x(ev.start) + 7, y: cy - capH - 3, fontSize: 14, fill: C.n500 }, ev.label));
+        });
+      }
+    });
+    y += sources.length * evh + 8;
+
+    // Crosshair: always present, moved by direct DOM writes on mousemove so the
+    // whole plot is not re-rendered per pixel.
+    kids.push(this.e('line', { key: 'ch', id: 'xh-l', x1: -99, y1: 22, x2: -99, y2: y, stroke: C.accent, strokeWidth: 0.8, opacity: 0.55 }));
+    kids.push(this.e('rect', { key: 'chb', id: 'xh-b', x: -199, y: 22, width: 160, height: 20, fill: C.bg, opacity: 0.9 }));
+    kids.push(this.e('text', { key: 'cht', id: 'xh-t', x: -99, y: 37, fontSize: 14.5, fill: C.a300, textAnchor: 'middle' }, ''));
+
+    this._hits = hits;
+    this._plotGeom = { L, W, t0, t1, vbw: L + W + 12 };
+    return this.e('svg', {
+      width: '100%', height: y, viewBox: `0 0 ${L + W + 12} ${y}`,
+      style: { display: 'block', userSelect: 'none', cursor: this._drag ? 'grabbing' : 'crosshair' }
+    }, kids);
+  }
+
+  // ── campaign strip (campaign view) ───────────────────────────────────────
+  campaignStrip() {
+    const ds = this.state.ds, C = this.C;
+    if (!ds) return null;
+    const L = 152, W = 1080, t0 = ds.campaign.start, t1 = ds.campaign.end;
+    const x = (t) => L + ((t - t0) / (t1 - t0)) * W;
+    const kids = [this.defs()];
+    let y = 16;
+    kids.push(...this.skyBands(L, W, t0, t1, 0, 8, 1));
+    kids.push(this.e('text', { key: 'sl', x: 0, y: 8, fontSize: 14, fill: C.n600 }, 'day/night'));
+    ds.instruments.forEach((inst, i) => {
+      const ry = y + i * 29;
+      kids.push(this.e('text', { key: 'l' + i, x: 0, y: ry + 17, fontSize: 15.5, fill: C.n300 }, inst.short));
+      kids.push(this.e('rect', { key: 'b' + i, x: L, y: ry + 3, width: W, height: 17, fill: C.n900 }));
+      this.records.coverage.filter((c) => c.instrumentId === inst.id).forEach((c, j) => {
+        const fill = c.validation === 'valid' ? C.a700 : c.validation === 'unchecked' ? 'none' : 'url(#p-hatch)';
+        kids.push(this.e('rect', { key: 'c' + i + j, x: x(c.start), y: ry + 3, width: Math.max(0.6, x(c.end) - x(c.start)), height: 17, fill, stroke: c.validation === 'unchecked' ? C.n700 : 'none', strokeWidth: 0.7 }));
+      });
+    });
+    y += ds.instruments.length * 29 + 8;
+    kids.push(this.e('text', { key: 'ovl', x: 0, y: y + 12, fontSize: 15.5, fill: C.a300 }, 'Overlap 2+'));
+    kids.push(this.e('rect', { key: 'ovb', x: L, y: y + 1, width: W, height: 15, fill: C.n900 }));
+    this.overlapSegments().forEach((s, i) => kids.push(this.e('rect', {
+      key: 'ov' + i, x: x(s.start), y: y + 1, width: Math.max(0.5, x(s.end) - x(s.start)), height: 15,
+      fill: s.free ? 'url(#p-hatch)' : C.a500
+    })));
+    y += 26;
+    ds.showers.forEach((sh, i) => {
+      kids.push(this.e('line', { key: 'sw' + i, x1: x(sh.peak), y1: 8, x2: x(sh.peak), y2: y, stroke: sh.major ? C.accent : C.n700, strokeWidth: sh.major ? 1.2 : 0.8, strokeDasharray: sh.major ? '' : '2 2' }));
+      kids.push(this.e('text', { key: 'st' + i, x: x(sh.peak) + 3, y: y + 10, fontSize: 14, fill: sh.major ? C.a300 : C.n500 }, sh.name));
+    });
+    y += 16;
+    for (let t = t0; t <= t1; t += 7 * 24 * H) kids.push(this.e('text', { key: 'd' + t, x: x(t), y: y + 10, fontSize: 14, fill: C.n500, textAnchor: 'middle' }, fmt(t, 'day').slice(5)));
+    y += 16;
+    return this.e('svg', {
+      width: '100%', height: y, viewBox: `0 0 ${L + W + 10} ${y}`, style: { display: 'block', cursor: 'pointer' },
+      onClick: (ev) => {
+        const r = ev.currentTarget.getBoundingClientRect();
+        const t = t0 + (((ev.clientX - r.left) * ((L + W + 10) / r.width) - L) / W) * (t1 - t0);
+        this.setState({ view: 'timeline' }); this.panTo(t, 12 * H);
+      }
+    }, kids);
+  }
+
+  // ── day × hour matrix ────────────────────────────────────────────────────
+  matrix() {
+    const ds = this.state.ds, C = this.C;
+    if (!ds) return null;
+    const cell = 13, gap = 1, days = Math.round((ds.campaign.end - ds.campaign.start) / (24 * H));
+    const gw = 24 * (cell + gap), gh = days * (cell + gap);
+    const padL = 62, gapX = 34;
+    const mode = this.state.matrixMode;
+    const kids = [this.defs()];
+    const HI = this.hourIndex();
+    const FLAGS = [null, 'unc', 'loss', 'inv', 'disp'];
+
+    ds.instruments.forEach((inst, ii) => {
+      const gx = padL + ii * (gw + gapX);
+      const slot = HI.idx[inst.id];
+      kids.push(this.e('text', { key: 'h' + ii, x: gx, y: 14, fontSize: 15.5, fill: C.n300 }, inst.short));
+      [0, 6, 12, 18].forEach((hh) => kids.push(this.e('text', { key: 'hh' + ii + hh, x: gx + hh * (cell + gap), y: 31, fontSize: 12, fill: C.n600 }, hh)));
+      for (let d = 0; d < days; d++) {
+        for (let h = 0; h < 24; h++) {
+          const hi = d * 24 + h;
+          const s = ds.campaign.start + hi * H;
+          let frac = 0, flag = null;
+          if (mode === 'events') {
+            frac = Math.min(1, HI.ev[hi] / 12);
+          } else {
+            frac = mode === 'usable' ? slot.use[hi] : slot.cov[hi];
+            flag = FLAGS[slot.flag[hi]];
+          }
+          const cx = gx + h * (cell + gap), cy = 38 + d * (cell + gap);
+          if (frac <= 0.001) {
+            kids.push(this.e('rect', { key: `z${ii}${d}${h}`, x: cx, y: cy, width: cell, height: cell, fill: 'none', stroke: C.n900, strokeWidth: 1 }));
+          } else {
+            kids.push(this.e('rect', {
+              key: `c${ii}${d}${h}`, x: cx, y: cy, width: cell, height: cell,
+              fill: flag === 'inv' ? 'url(#p-hatch)' : (mode === 'events' ? C.n500 : C.a500),
+              opacity: flag === 'inv' ? 1 : 0.22 + frac * 0.78,
+              style: { cursor: 'pointer' },
+              onClick: () => { this.setState({ view: 'timeline' }); this.panTo(s + H / 2, 2 * H); }
+            }));
+            if (flag === 'loss') kids.push(this.e('rect', { key: `f${ii}${d}${h}`, x: cx, y: cy + cell - 2, width: cell, height: 2, fill: C.n200 }));
+            if (flag === 'unc') kids.push(this.e('rect', { key: `u${ii}${d}${h}`, x: cx + 0.5, y: cy + 0.5, width: cell - 1, height: cell - 1, fill: 'none', stroke: C.n600, strokeDasharray: '2 2', strokeWidth: 1 }));
+            if (flag === 'disp') kids.push(this.e('text', { key: `d${ii}${d}${h}`, x: cx + cell / 2, y: cy + cell - 1.5, fontSize: 12, fill: C.a300, textAnchor: 'middle', fontWeight: 700 }, '!'));
+          }
+        }
+      }
+    });
+    for (let d = 0; d < days; d++) {
+      const t = ds.campaign.start + d * 24 * H, dt = new Date(t);
+      if (dt.getUTCDate() % 5 === 0 || d === 0) {
+        kids.push(this.e('text', { key: 'dl' + d, x: 0, y: 38 + d * (cell + gap) + cell - 2, fontSize: 13.5, fill: C.n500 }, `${dt.getUTCDate()} ${MON[dt.getUTCMonth()]}`));
+      }
+    }
+    const totalW = padL + ds.instruments.length * (gw + gapX);
+    return this.e('svg', { width: totalW, height: 38 + gh + 8, viewBox: `0 0 ${totalW} ${38 + gh + 8}`, style: { display: 'block' } }, kids);
+  }
+
+  // ── pointer / keyboard ───────────────────────────────────────────────────
+  plotXY(ev) {
+    const svg = ev.currentTarget.querySelector('svg');
+    this._svg = svg;
+    if (!svg || !this._plotGeom) return null;
+    const r = svg.getBoundingClientRect();
+    const scale = this._plotGeom.vbw / r.width;
+    return { x: (ev.clientX - r.left) * scale, y: (ev.clientY - r.top) * scale, rect: r, scale };
+  }
+  onPlotMove(ev) {
+    const p = this.plotXY(ev);
+    if (!p) return;
+    const g = this._plotGeom;
+    const t = g.t0 + ((p.x - g.L) / g.W) * (g.t1 - g.t0);
+    this._cursorT = t;
+    const svg = this._svg;
+    if (svg) {
+      const l = svg.querySelector('#xh-l'), b = svg.querySelector('#xh-b'), tx = svg.querySelector('#xh-t');
+      if (l && b && tx) {
+        const inside = p.x >= g.L && p.x <= g.L + g.W;
+        l.setAttribute('x1', inside ? p.x : -99); l.setAttribute('x2', inside ? p.x : -99);
+        b.setAttribute('x', inside ? p.x - 80 : -199);
+        tx.setAttribute('x', inside ? p.x : -99);
+        tx.textContent = inside ? fmt(t, (g.t1 - g.t0) < 2 * M ? 'sec' : 'min') : '';
+      }
+    }
+    let hit = null;
+    for (const h of this._hits || []) {
+      if (p.x >= h.x1 && p.x <= h.x2 && p.y >= h.y1 && p.y <= h.y2) { hit = h; if (h.type === 'rec') break; }
+    }
+    const id = hit && hit.type === 'rec' ? hit.rec.id : null;
+    if (id !== this.state.hoverId) this.setState({ hoverId: id });
+  }
+  onPlotLeave() {
+    this._cursorT = null;
+    const svg = this._svg;
+    if (svg) {
+      const l = svg.querySelector('#xh-l'), b = svg.querySelector('#xh-b'), tx = svg.querySelector('#xh-t');
+      if (l && b && tx) { l.setAttribute('x1', -99); l.setAttribute('x2', -99); b.setAttribute('x', -199); tx.textContent = ''; }
+    }
+    if (this.state.hoverId) this.setState({ hoverId: null });
+  }
+  onPlotDown(ev) {
+    const p = this.plotXY(ev);
+    if (!p) return;
+    for (const h of this._hits || []) {
+      if (p.x >= h.x1 && p.x <= h.x2 && p.y >= h.y1 && p.y <= h.y2) {
+        if (h.type === 'lane') {
+          // Only instruments whose records distinguish channels can expand; clicking the others
+          // should do nothing rather than toggle a state with no visible effect.
+          const inst = this.state.ds.instruments.find((i) => i.id === h.instId);
+          if ((inst?.channels || []).length < 2) return;
+          const ex = Object.assign({}, this.state.expanded);
+          ex[h.instId] = !ex[h.instId];
+          this.setState({ expanded: ex });
+          return;
+        }
+        if (h.type === 'rec') { this.setState({ selId: h.rec.id }); return; }
+      }
+    }
+    this._drag = { kind: 'pan', x: ev.clientX, vs: this.state.vs, ve: this.state.ve, span: this.span, plotW: (this._plotGeom.W / this._plotGeom.vbw) * p.rect.width };
+  }
+  onPlotWheel(ev) {
+    // The scroll is cancelled by the non-passive listener bindWheel attached; calling
+    // preventDefault here would be ignored and only produce a console warning.
+    const p = this.plotXY(ev);
+    const g = this._plotGeom;
+    const t = p ? g.t0 + ((p.x - g.L) / g.W) * (g.t1 - g.t0) : (this.state.vs + this.state.ve) / 2;
+    const factor = ev.deltaY > 0 ? 1.22 : 1 / 1.22;
+    const campaign = this.state.ds.campaign;
+    const full = campaign.end - campaign.start;
+    const newSpan = Math.max(10 * S, Math.min(full, this.span * factor));
+    // Same rule as setSpan: the widest view is the campaign itself, not a campaign-sized window
+    // hung around the cursor.
+    if (newSpan >= full) return this.setState({ vs: campaign.start, ve: campaign.end });
+    const frac = (t - this.state.vs) / this.span;
+    this.setState({ vs: t - frac * newSpan, ve: t - frac * newSpan + newSpan });
+  }
+  onKey(ev) {
+    const k = ev.key;
+    if (k === 'ArrowLeft' || k === 'ArrowRight') { ev.preventDefault(); const d = this.span * 0.25 * (k === 'ArrowLeft' ? -1 : 1); this.setState({ vs: this.state.vs + d, ve: this.state.ve + d }); }
+    else if (k === 'ArrowUp' || k === '+' || k === '=') { ev.preventDefault(); this.setSpan(this.span / 1.6); }
+    else if (k === 'ArrowDown' || k === '-') { ev.preventDefault(); this.setSpan(this.span * 1.6); }
+    else if (k === 'Home') { ev.preventDefault(); this.setState({ vs: this.state.ds.campaign.start, ve: this.state.ds.campaign.end }); }
+    else if (k === '[' || k === ']') {
+      ev.preventDefault();
+      const all = this.records.coverage.concat(this.records.events).sort((a, b) => a.start - b.start);
+      const c = (this.state.vs + this.state.ve) / 2;
+      const next = k === ']' ? all.find((r) => r.start > c + 1000) : all.slice().reverse().find((r) => r.start < c - 1000);
+      if (next) { this.setState({ selId: next.id }); this.panTo(next.start); }
+    }
+  }
+
+  // ── edits ────────────────────────────────────────────────────────────────
+  savePending(p) {
+    this._pv = (this._pv || 0) + 1;
+    this.setState({ pending: p });
+    try { localStorage.setItem('ionosphere.pending.v1', JSON.stringify(p)); } catch (e) { /* quota */ }
+  }
+  patchSel(fields) {
+    const id = this.state.selId; if (!id) return;
+    const p = Object.assign({}, this.state.pending);
+    p[id] = Object.assign({ id }, p[id], fields, { provenance: 'manual', _editedAt: new Date().toISOString() });
+    this.savePending(p);
+  }
+  get selected() {
+    const id = this.state.hoverId || this.state.selId;
+    if (!id || !this.state.ds) return null;
+    const all = this.records.coverage.concat(this.records.events, this.state.ds.configs, this.state.ds.interference);
+    return all.find((r) => r.id === id) || null;
+  }
+  download(name, text, mime) {
+    const b = new Blob([text], { type: mime });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(b); a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  // ── inspector content ────────────────────────────────────────────────────
+  inspector() {
+    const C = this.C, r = this.selected;
+    if (!r) {
+      return {
+        kicker: 'Inspector', title: 'Nothing selected',
+        badges: [], rows: [
+          { label: 'hover', value: 'read a mark without selecting it' },
+          { label: 'click', value: 'pin it here' },
+          { label: '[ ]', value: 'step to previous / next record' },
+          { label: 'lane label', value: 'expand an instrument into channels' }
+        ], note: '', hasNote: false
+      };
+    }
+    const tag = (text, accent) => ({ text, style: `font-size: 14px;padding:1px 7px;background:${accent ? C.a800 : C.n800};color:${accent ? C.a300 : C.n200};` });
+    const rows = [], badges = [];
+    if (r.recordKind === 'coverage') {
+      badges.push(tag(r.instrumentId + (r.channel ? ' · ' + r.channel : '')));
+      badges.push(tag(r.validation, r.validation === 'valid'));
+      badges.push(tag('status ' + r.status));
+      badges.push(tag(r.publishState, r.publishState === 'published'));
+      if (r.provenance === 'sheet_2024') badges.push(tag('2024 sheet', true));
+      if (r._edited) badges.push(tag('locally edited', true));
+      rows.push({ label: 'start', value: fmt(r.start, 'sec') + ' UTC' });
+      rows.push({ label: 'end', value: r.ongoing ? 'ongoing at scan time' : fmt(r.end, 'sec') + ' UTC' });
+      rows.push({ label: 'duration', value: dur((r.end - r.start) / 1000) });
+      rows.push({ label: 'end basis', value: r.endBasis + (r.endUncertaintySec ? ` (lower bound, ±${dur(r.endUncertaintySec)})` : '') });
+      rows.push({ label: 'clock', value: r.clockQuality + ' · scale ' + r.timeScale });
+      rows.push({ label: 'integrity', value: `${r.status} · checked by ${r.checkMethod}` });
+      if (r.lossSeverity !== 'none') {
+        const q = r.lossQuantity ? `${r.lossQuantity} ${r.lossUnit}` : '—';
+        const secs = r.lossDurationSec ? ` (≈${dur(r.lossDurationSec)} at 30 s cadence)` : '';
+        rows.push({ label: 'loss', value: `${r.lossSeverity} · ${q}${secs}` });
+        rows.push({ label: 'recoverable', value: r.lossRecoverable === true ? 'can be recovered' : r.lossRecoverable === false ? 'not recoverable' : 'unrecorded' });
+      }
+      if (r.processingConclusion) rows.push({ label: 'conclusion', value: r.processingConclusion });
+      if (r.processingResultUrl) rows.push({ label: 'archive', value: r.processingResultUrl });
+      rows.push({ label: 'provenance', value: r.provenance });
+    } else if (r.recordKind === 'event') {
+      badges.push(tag(r.eventSource));
+      badges.push(tag(r.eventClass, r.eventClass === 'fireball'));
+      if (r.disputed) badges.push(tag('disputed', true));
+      if (r.provenance === 'sheet_2024') badges.push(tag('2024 sheet', true));
+      rows.push({ label: 'best estimate', value: fmt(r.start, 'sec') + ' UTC' });
+      if (r.uncertaintySec == null) rows.push({ label: 'timing', value: 'unknown — basis "' + r.uncertaintyBasis + '", drawn across the containing night' });
+      else rows.push({ label: 'timing', value: `±${dur(r.uncertaintySec)} · basis ${r.uncertaintyBasis}` });
+      if (r.eventDurationSec) rows.push({ label: 'duration', value: r.durationBinLowSec != null ? `${r.eventDurationSec} s (AMS bin ${r.durationBinLowSec}–${r.durationBinHighSec} s)` : r.eventDurationSec + ' s' });
+      if (r.magnitudeValue != null) rows.push({ label: 'magnitude', value: `${r.magnitudeValue} · ${r.magnitudeBasis}` });
+      if (r.witnessCount) rows.push({ label: 'witnesses', value: r.witnessCount });
+      if (r.eventVehicle) rows.push({ label: 'vehicle', value: r.eventVehicle + ' · ' + r.eventLocation });
+      if (r.eventEnd) rows.push({ label: 'mission end', value: fmt(r.eventEnd, 'min') + ' UTC — not a confound window' });
+      if (r.confoundWindowSec) rows.push({ label: 'confound', value: `≈${dur(r.confoundWindowSec)} from launch (ascent plume, AGW)` });
+      if (r.eventLocation && !r.eventVehicle) rows.push({ label: 'region', value: r.eventLocation });
+      if (r.eventRefId) rows.push({ label: 'ref', value: r.eventRefId });
+      rows.push({ label: 'publish', value: r.publishState });
+    } else if (r.recordKind === 'config') {
+      badges.push(tag('configuration'));
+      rows.push({ label: 'from', value: fmt(r.start, 'min') + ' UTC' });
+      rows.push({ label: 'change', value: r.label });
+      if (r.note) rows.push({ label: 'why it matters', value: r.note });
+    } else {
+      badges.push(tag('interference'));
+      badges.push(tag(r.kind));
+      rows.push({ label: 'from', value: fmt(r.start, 'min') + ' UTC' });
+      rows.push({ label: 'to', value: fmt(r.end, 'min') + ' UTC' });
+      rows.push({ label: 'affects', value: (r.instrumentIds || []).join(', ') });
+    }
+    return {
+      kicker: r.recordKind + (r.recordKind === 'coverage' ? ' record' : ''),
+      title: r.label || r.id, badges, rows,
+      note: r.disputeNote || '', hasNote: !!r.disputeNote
+    };
+  }
+
+  renderVals() {
+    this.applyTheme();
+    const C = this.C, st = this.state, ds = st.ds;
+    const active = (on) => `font-size: 17px;padding:5px 11px;border:1px solid ${on ? C.accent : 'transparent'};color:${on ? C.a300 : C.n400};background:${on ? C.a900 : 'transparent'};`;
+    const v = st.view;
+    const insp = this.inspector();
+    const sel = this.selected;
+    const cfg = this.cfg;
+
+    const width = st.width;
+    const pendCount = Object.keys(st.pending).length;
+    const ctxEl = v === 'timeline' ? this.contextBand(width) : null;
+
+    // headline overlap
+    let ovHours = 0, ov3 = 0;
+    if (ds) this.overlapSegments().forEach((s) => { ovHours += (s.end - s.start) / H; if (s.depth >= 3) ov3 += (s.end - s.start) / H; });
+
+    // visible-window emptiness
+    let visCount = 0, nearest = null;
+    if (ds) {
+      const inWin = (a, b) => b > st.vs && a < st.ve;
+      visCount = this.records.coverage.filter((c) => inWin(c.start, c.end)).length
+        + this.records.events.filter((e) => inWin(e.start, e.start)).length;
+      if (!visCount) {
+        const c = (st.vs + st.ve) / 2;
+        const all = this.records.coverage.concat(this.records.events);
+        all.forEach((r) => {
+          const d = Math.abs(r.start - c);
+          if (!nearest || d < nearest.d) nearest = { d, r, dir: r.start > c ? 'later' : 'earlier' };
+        });
+      }
+    }
+
+    const crumbLevels = ds ? [
+      { label: 'Campaign · 45 d', span: ds.campaign.end - ds.campaign.start },
+      { label: 'Week', span: 7 * 24 * H },
+      { label: 'Night · 12 h', span: 12 * H },
+      { label: 'Hour', span: H },
+      { label: 'Event · ±5 min', span: 10 * M }
+    ] : [];
+    let curLevel = 0;
+    crumbLevels.forEach((lv, i) => { if (this.span <= lv.span * 1.4) curLevel = i; });
+    const crumbs = crumbLevels.filter((lv, i) => i <= curLevel + 1).map((lv, i) => {
+      const on = i === curLevel;
+      let label = lv.label;
+      if (ds && i > 0) {
+        const c = (st.vs + st.ve) / 2;
+        if (i === 1) label = 'Week of ' + fmt(c - 3 * 24 * H, 'day').slice(5);
+        if (i === 2) label = dayLabel(c);
+        if (i === 3) label = fmt(c, 'min').slice(11) + ' UTC';
+        if (i === 4) label = fmt(c, 'sec').slice(11) + ' UTC';
+      }
+      return {
+        label: (i ? '› ' : '') + label,
+        style: `font-size:${on ? 21 : 16}px;padding:2px 5px;color:${on ? C.a300 : C.n500};font-weight:${on ? 500 : 400};`,
+        go: () => this.setSpan(lv.span)
+      };
+    });
+
+    const pxSpan = this.span / Math.max(1, width - 164);
+    const resolution = pxSpan < 1000 ? `1 px ≈ ${(pxSpan / 1000).toFixed(2)} s`
+      : pxSpan < 60000 ? `1 px ≈ ${Math.round(pxSpan / 1000)} s`
+      : pxSpan < 3600e3 ? `1 px ≈ ${Math.round(pxSpan / 60000)} min` : `1 px ≈ ${(pxSpan / 3600e3).toFixed(1)} h`;
+
+    const presetDefs = ds ? [
+      { label: '45 days', go: () => this.setState({ vs: ds.campaign.start, ve: ds.campaign.end }) },
+      { label: 'One night', go: () => this.panTo(Date.parse('2024-08-12T06:00:00Z'), 14 * H) },
+      { label: 'Dense hour', go: () => this.panTo(Date.parse('2024-08-02T05:30:00Z'), 2 * H) },
+      { label: '±5 min', go: () => this.panTo(Date.parse('2024-08-02T05:45:00Z'), 10 * M) },
+      { label: 'Fragmented', go: () => this.panTo(Date.parse('2024-08-06T13:00:00Z'), 14 * H) },
+      { label: '20 min', go: () => this.panTo(Date.parse('2024-08-14T01:10:00Z'), 3 * H) },
+      { label: 'Gap', go: () => this.panTo(Date.parse('2024-09-06T15:00:00Z'), 6 * H) }
+    ] : [];
+    const presets = presetDefs.map((p) => ({
+      label: p.label, go: p.go,
+      style: `font-size: 16px;padding:3px 8px;color:${C.n300};`
+    }));
+
+    const swatch = (kind) => {
+      const box = (inner, extra) => React.createElement('svg', { width: 64, height: 20, viewBox: '0 0 46 14' }, inner);
+      const R = (props) => React.createElement('rect', Object.assign({ x: 1, y: 2, width: 44, height: 10, rx: 1.5 }, props));
+      const defs = this.defs();
+      switch (kind) {
+        case 'valid': return box([defs, R({ key: 'r', fill: C.a800, stroke: C.a500 })]);
+        case 'bad': return box([defs, R({ key: 'r', fill: 'url(#p-dots)', stroke: C.a500 })]);
+        case 'invalid': return box([defs, R({ key: 'r', fill: 'url(#p-hatch)', stroke: C.n500 })]);
+        case 'unchecked': return box([defs, R({ key: 'r', fill: 'none', stroke: C.n600 })]);
+        case 'loss-minor': return box([defs, R({ key: 'r', fill: C.a800, stroke: C.a500 }), React.createElement('line', { key: 'l', x1: 1, y1: 10.8, x2: 45, y2: 10.8, stroke: C.n300, strokeWidth: 2.4, strokeDasharray: '3 3', opacity: 0.6 })]);
+        case 'loss-major': return box([defs, R({ key: 'r', fill: C.a800, stroke: C.a500 }), React.createElement('line', { key: 'l', x1: 1, y1: 10.8, x2: 45, y2: 10.8, stroke: C.n300, strokeWidth: 2.6 })]);
+        case 'ongoing': return box([defs, React.createElement('rect', { key: 'r', x: 1, y: 2, width: 40, height: 10, fill: 'url(#g-ongoing)', stroke: C.a500, strokeWidth: 0 }), React.createElement('text', { key: 't', x: 40, y: 11, fontSize: 15.5, fill: C.n500 }, '›')]);
+        case 'derived': return box([defs, R({ key: 'r', width: 30, fill: C.a800, stroke: C.a500 }), React.createElement('rect', { key: 'd', x: 31, y: 3, width: 12, height: 8, fill: C.a900, stroke: C.a700, strokeDasharray: '2 2' })]);
+        case 'freeclock': return box([defs, R({ key: 'r', y: 1, height: 9, fill: C.a800, stroke: C.a500 }), React.createElement('line', { key: 'l', x1: 1, y1: 12, x2: 45, y2: 12, stroke: C.n400, strokeWidth: 1.4, strokeDasharray: '1.5 2' })]);
+        case 'daylight': return box([defs, R({ key: 'r', fill: C.a800, stroke: C.a500 }), React.createElement('rect', { key: 'd', x: 1, y: 2, width: 22, height: 10, fill: 'url(#p-light)' })]);
+        case 'disputed': return box([defs, R({ key: 'r', fill: C.a800, stroke: C.a300, strokeDasharray: '3 2' }), React.createElement('text', { key: 't', x: 3, y: 11, fontSize: 15.5, fill: C.a300, fontWeight: 600 }, '!')]);
+        case 'overlap2': return box([React.createElement('rect', { key: 'r', x: 1, y: 5, width: 44, height: 5, fill: C.a500 })]);
+        case 'overlap3': return box([React.createElement('rect', { key: 'r', x: 1, y: 2, width: 44, height: 10, fill: C.a500 }), React.createElement('text', { key: 't', x: 3, y: 10.5, fontSize: 12, fill: C.bg, fontWeight: 700 }, '3×')]);
+        case 'overlapfree': return box([defs, React.createElement('rect', { key: 'r', x: 1, y: 2, width: 44, height: 10, fill: 'url(#p-hatch)' })]);
+        case 'ev-interval': return box([
+          React.createElement('line', { key: 'a', x1: 8, y1: 7, x2: 38, y2: 7, stroke: C.n400, strokeWidth: 1.2 }),
+          React.createElement('line', { key: 'b', x1: 8, y1: 3, x2: 8, y2: 11, stroke: C.n400, strokeWidth: 1.2 }),
+          React.createElement('line', { key: 'c', x1: 38, y1: 3, x2: 38, y2: 11, stroke: C.n400, strokeWidth: 1.2 }),
+          React.createElement('rect', { key: 'd', x: 22, y: 4.5, width: 1.6, height: 5, fill: C.n400 })]);
+        case 'ev-narrow': return box([
+          React.createElement('line', { key: 'a', x1: 21, y1: 7, x2: 25, y2: 7, stroke: C.n400, strokeWidth: 1.2 }),
+          React.createElement('line', { key: 'b', x1: 21, y1: 3, x2: 21, y2: 11, stroke: C.n400, strokeWidth: 1.2 }),
+          React.createElement('line', { key: 'c', x1: 25, y1: 3, x2: 25, y2: 11, stroke: C.n400, strokeWidth: 1.2 }),
+          React.createElement('text', { key: 'd', x: 23, y: 3, fontSize: 12, fill: C.n600, textAnchor: 'middle' }, '±')]);
+        case 'ev-unknown': return box([
+          React.createElement('line', { key: 'a', x1: 2, y1: 7, x2: 44, y2: 7, stroke: C.n400, strokeWidth: 1, strokeDasharray: '1 3' }),
+          React.createElement('circle', { key: 'b', cx: 23, cy: 7, r: 4, fill: 'none', stroke: C.n400, strokeWidth: 1.2 }),
+          React.createElement('text', { key: 'c', x: 23, y: 10, fontSize: 12, fill: C.n400, textAnchor: 'middle' }, '?')]);
+        case 'ev-launch': return box([
+          React.createElement('line', { key: 'a', x1: 6, y1: 2, x2: 44, y2: 2, stroke: C.n700, strokeWidth: 1, strokeDasharray: '2 4' }),
+          React.createElement('rect', { key: 'b', x: 6, y: 4, width: 12, height: 7, fill: C.n400 })]);
+        case 'config': return box([
+          React.createElement('line', { key: 'a', x1: 23, y1: 1, x2: 23, y2: 13, stroke: C.a300, strokeWidth: 1.4 }),
+          React.createElement('rect', { key: 'b', x: 20.5, y: 4.5, width: 5, height: 5, fill: C.a300, transform: 'rotate(45 23 7)' })]);
+        case 'interference': return box([defs, React.createElement('rect', { key: 'r', x: 1, y: 2, width: 44, height: 10, fill: 'url(#p-int)', stroke: C.n600, strokeWidth: 0.8 })]);
+        case 'sky': return box(this.skyBands(1, 44, Date.parse('2024-08-12T00:00:00Z'), Date.parse('2024-08-13T00:00:00Z'), 2, 10, 2));
+        default: return box([]);
+      }
+    };
+    const legendGroups = [
+      { name: 'Signal validation — fill', items: [
+        { swatch: swatch('valid'), label: 'valid' },
+        { swatch: swatch('bad'), label: 'bad-looking (files fine, signal unusable)' },
+        { swatch: swatch('invalid'), label: 'invalid or corrupt' },
+        { swatch: swatch('unchecked'), label: 'unchecked — no claim made' }
+      ] },
+      { name: 'Loss — bottom strip', items: [
+        { swatch: swatch('loss-minor'), label: 'minor loss' },
+        { swatch: swatch('loss-major'), label: 'major loss' }
+      ] },
+      { name: 'Edges and time discipline', items: [
+        { swatch: swatch('ongoing'), label: 'ongoing at scan time' },
+        { swatch: swatch('derived'), label: 'derived end — lower bound, not an edge' },
+        { swatch: swatch('freeclock'), label: 'clock free-running or unknown' },
+        { swatch: swatch('disputed'), label: 'disputed / needs review' }
+      ] },
+      { name: 'Sensitivity', items: [
+        { swatch: swatch('sky'), label: 'day → twilight → dark' },
+        { swatch: swatch('daylight'), label: 'optical coverage in daylight — up, but blind' }
+      ] },
+      { name: 'Overlap (usable only)', items: [
+        { swatch: swatch('overlap2'), label: '2 instruments' },
+        { swatch: swatch('overlap3'), label: '3 or more' },
+        { swatch: swatch('overlapfree'), label: 'excluded from totals — undisciplined clock' }
+      ] },
+      { name: 'Events — interval first', items: [
+        { swatch: swatch('ev-interval'), label: 'uncertainty interval, tick at best estimate' },
+        { swatch: swatch('ev-narrow'), label: 'interval narrower than one pixel' },
+        { swatch: swatch('ev-unknown'), label: 'timing unknown — spans the night' },
+        { swatch: swatch('ev-launch'), label: 'launch: confound window solid, mission dotted' }
+      ] },
+      { name: 'Context', items: [
+        { swatch: swatch('config'), label: 'configuration change' },
+        { swatch: swatch('interference'), label: 'known contamination' }
+      ] }
+    ];
+
+    // records table
+    let tableRows = [], tableCount = 0;
+    if (ds) {
+      const q = st.query.toLowerCase();
+      let list = [];
+      if (st.kindFilter === 'all' || st.kindFilter === 'coverage') list = list.concat(this.records.coverage);
+      if (st.kindFilter === 'all' || st.kindFilter === 'event') list = list.concat(this.records.events);
+      if (st.kindFilter === 'context') list = list.concat(ds.configs, ds.interference);
+      if (cfg.publishedOnly) list = list.filter((r) => r.publishState === 'published');
+      if (q) list = list.filter((r) => ((r.label || '') + (r.id || '') + (r.instrumentId || '') + (r.eventSource || '')).toLowerCase().includes(q));
+      const key = st.sortKey;
+      list = list.slice().sort((a, b) => {
+        const av = key === 'start' ? a.start : String(a[key] || ''), bv = key === 'start' ? b.start : String(b[key] || '');
+        return (av > bv ? 1 : av < bv ? -1 : 0) * st.sortDir;
+      });
+      tableCount = list.length;
+      tableRows = list.slice(0, 300).map((r) => ({
+        id: r.id, kind: r.recordKind,
+        kindStyle: `font-size: 14px;padding:1px 6px;background:${r.recordKind === 'coverage' ? C.a800 : C.n800};color:${r.recordKind === 'coverage' ? C.a300 : C.n200};`,
+        subject: r.recordKind === 'coverage' ? r.instrumentId + (r.channel ? '·' + r.channel : '') : (r.eventSource || r.kind || r.instrumentId || '—'),
+        start: fmt(r.start, 'sec'),
+        extent: r.recordKind === 'coverage' ? (r.ongoing ? 'ongoing' : dur((r.end - r.start) / 1000)) : (r.uncertaintySec == null ? 'timing unknown' : '±' + dur(r.uncertaintySec)),
+        quality: r.recordKind === 'coverage' ? `${r.validation}/${r.status}${r.lossSeverity !== 'none' ? '/' + r.lossSeverity + ' loss' : ''}` : (r.magnitudeValue != null ? 'mag ' + r.magnitudeValue : '—'),
+        label: (r.disputed ? '⚠ ' : '') + (r.label || ''),
+        provenance: r.provenance || '—',
+        style: `cursor:pointer;${st.selId === r.id ? 'background:' + C.a900 + ';' : ''}`,
+        select: () => this.setState({ selId: r.id, view: 'timeline' })
+      }));
+    }
+    const colDefs = [['id', 'ID'], ['recordKind', 'Kind'], ['instrumentId', 'Subject'], ['start', 'Start (UTC)'], ['extent', 'Extent / ±'], ['validation', 'Quality'], ['label', 'Label'], ['provenance', 'Prov.']];
+
+    // stats
+    const stats = [];
+    if (ds) {
+      // Union across channels — three magnetometer components covering the same
+      // hour are one hour of instrument coverage, not three.
+      const usableH = {}, byInst = {};
+      this.records.coverage.forEach((c) => {
+        if (!this.usable(c)) return;
+        (byInst[c.instrumentId] = byInst[c.instrumentId] || []).push([c.start, c.end]);
+      });
+      Object.keys(byInst).forEach((k) => {
+        usableH[k] = merge(byInst[k]).reduce((a, [s, e]) => a + (e - s) / H, 0);
+      });
+      const pub = { draft: 0, publishable: 0, published: 0 };
+      this.records.coverage.forEach((c) => { pub[c.publishState] = (pub[c.publishState] || 0) + 1; });
+      stats.push({ label: 'Overlap 2+ usable', value: ovHours.toFixed(0) + ' h', note: `${cfg.includeUnd ? 'incl. unverified clocks' : 'clock-disciplined only'} · ≥ ${dur(cfg.minOverlapSec)} segments` });
+      stats.push({ label: 'Overlap 3+ usable', value: ov3.toFixed(0) + ' h', note: 'the only windows supporting cross-instrument work' });
+      ds.instruments.forEach((inst) => {
+        const h = usableH[inst.id] || 0;
+        const recorded = this.records.coverage.some((c) => c.instrumentId === inst.id);
+        stats.push({
+          label: inst.short + ' usable', value: h.toFixed(0) + ' h',
+          note: h === 0 && recorded
+            ? 'has coverage, none validated yet — “usable” is a human call, not an assumption'
+            : `${(h / (45 * 24) * 100).toFixed(0)}% of campaign · union of channels`
+        });
+      });
+      stats.push({ label: 'Publish state', value: pub.published + ' / ' + this.records.coverage.length, note: `${pub.published} published · ${pub.publishable} publishable · ${pub.draft} draft` });
+      stats.push({ label: 'Excluded', value: String(ds.broken.length + this.records.coverage.filter((c) => c.disputed).length), note: 'undrawable or disputed — not in any total above' });
+    }
+
+    const pubOpts = ['draft', 'publishable', 'published'].map((p) => ({
+      label: p, checked: sel ? sel.publishState === p : false,
+      style: `font-size: 16px;padding:5px 8px;flex:1;justify-content:center;${sel && sel.publishState === p ? 'color:' + C.a300 + ';box-shadow:inset 0 0 0 1px ' + C.accent + ';' : ''}`,
+      set: () => this.patchSel({ publishState: p })
+    }));
+
+    return {
+      // chrome
+      isTimeline: v === 'timeline', isCampaign: v === 'campaign', isRecords: v === 'records',
+      navTimelineStyle: active(v === 'timeline'),
+      navCampaignStyle: active(v === 'campaign'), navRecordsStyle: active(v === 'records'),
+      goTimeline: () => this.setState({ view: 'timeline' }),
+      goCampaign: () => this.setState({ view: 'campaign' }), goRecords: () => this.setState({ view: 'records' }),
+      datasetVersion: ds ? ds.meta.datasetVersion : '—',
+      scanTimestamp: ds ? ds.meta.scanTimestamp.replace('T', ' ').replace(':00.000Z', 'Z').replace(':00Z', 'Z') : '—',
+      scannerVersion: ds ? ds.meta.scannerVersion : 'loading…',
+      // The provenance banner reads from the dataset rather than being written into the page.
+      // Hardcoded, it claimed SYNTHETIC over real records — the one thing this banner exists to
+      // get right, and the failure would be invisible because it looks exactly like the truth.
+      provenanceTag: !ds ? 'LOADING' : ds.meta.provenance === 'synthetic' ? 'SYNTHETIC' : 'MEASURED',
+      provenanceNote: !ds
+        ? 'Loading the record…'
+        : ds.meta.provenance === 'synthetic'
+          ? 'Density invented; records badged 2024 sheet are the real cases. No scanner yet.'
+          : `From the lab record — ${ds.meta.sourceNote}`,
+      isLight: this.light, isDark: !this.light,
+      lightOptStyle: `font-size: 16.5px;padding:4px 9px;${this.light ? 'color:var(--color-accent);box-shadow:inset 0 0 0 1px var(--color-accent);' : ''}`,
+      darkOptStyle: `font-size: 16.5px;padding:4px 9px;${this.light ? '' : 'color:var(--color-accent);box-shadow:inset 0 0 0 1px var(--color-accent);'}`,
+      setLight: () => this.setState({ theme: 'light' }),
+      setDark: () => this.setState({ theme: 'dark' }),
+      greyStyle: `font-size: 16px;padding:2px 7px;${st.greyscale ? 'color:var(--color-accent);box-shadow:inset 0 0 0 1px var(--color-accent);' : 'color:var(--color-neutral-400);'}`,
+      toggleGreyscale: () => {
+        const on = !st.greyscale;
+        this.setState({ greyscale: on });
+        try { document.body.classList.toggle('greyscale', on); } catch (e) { /* noop */ }
+      },
+      manageOn: st.manage, manageLabel: st.manage ? 'Leave manage mode' : 'Manage data',
+      toggleManage: () => this.setState({ manage: !st.manage }),
+      pendingLabel: pendCount ? `${pendCount} local edit${pendCount > 1 ? 's' : ''} not in the repo` : 'No local edits yet',
+      discardPending: () => { this.savePending({}); },
+      exportPatch: () => this.download('availability-patch.json', JSON.stringify({ datasetVersion: ds && ds.meta.datasetVersion, generated: new Date().toISOString(), mergePolicy: 'scanner-wins', edits: st.pending }, null, 2), 'application/json'),
+
+      hasBroken: !!(ds && ds.broken.length), brokenCount: ds ? ds.broken.length : 0,
+      brokenList: ds ? ds.broken.map((b) => ({ id: b.id, reason: b.reason })) : [],
+      brokenOpen: !!st.brokenOpen, brokenCaret: st.brokenOpen ? '▾' : '▸',
+      toggleBroken: () => this.setState({ brokenOpen: !st.brokenOpen }),
+
+      // timeline
+      presets, crumbs, resolutionLabel: resolution,
+      moonLabel: ds ? `moon ${Math.round(this.moon((st.vs + st.ve) / 2).fraction * 100)}% illuminated` : '',
+      rangeLabel: ds ? `${fmt(st.vs, 'sec')} → ${fmt(st.ve, 'sec')} UTC` : '',
+      zoomSlider: ds ? Math.round(1000 - (Math.log(this.span / (10 * S)) / Math.log((ds.campaign.end - ds.campaign.start) / (10 * S))) * 1000) : 500,
+      onZoomSlider: (e) => {
+        const t = 1 - e.target.value / 1000;
+        const camp = ds.campaign.end - ds.campaign.start;
+        this.setSpan(10 * S * Math.pow(camp / (10 * S), t));
+      },
+      zoomIn: () => this.setSpan(this.span / 2), zoomOut: () => this.setSpan(this.span * 2),
+      ribbonEl: v === 'timeline' ? this.ribbon(width) : null, contextEl: ctxEl, hasContext: !!ctxEl,
+      plotEl: v === 'timeline' ? this.plot(width) : null, plotRef: (el) => { if (!this.plotRef) this.plotRef = { current: null }; this.plotRef.current = el; this.bindWheel(el); },
+      onPlotMove: (e) => this.onPlotMove(e), onPlotLeave: () => this.onPlotLeave(),
+      onPlotDown: (e) => this.onPlotDown(e), onPlotWheel: (e) => this.onPlotWheel(e), onKey: (e) => this.onKey(e),
+      isEmptyView: !!(ds && !visCount),
+      emptyDetail: nearest ? `Nothing recorded between ${fmt(st.vs, 'min')} and ${fmt(st.ve, 'min')} UTC. Absence here means no record exists — not that an instrument was down; nothing in the dataset asserts either.` : '',
+      nearestLabel: nearest ? `Nearest record: ${dur(nearest.d / 1000)} ${nearest.dir} →` : 'Back to campaign',
+      goNearest: () => { if (nearest) this.panTo(nearest.r.start); else this.setState({ vs: ds.campaign.start, ve: ds.campaign.end }); },
+
+      clockChipStyle: `font-size: 14px;cursor:pointer;${cfg.includeUnd ? 'background:' + C.a800 + ';color:' + C.a300 + ';' : 'border:1px solid ' + C.accent + ';color:' + C.accent + ';'}`,
+      // "unverified" rather than "undisciplined": these clocks are not known to be bad, they are
+      // simply unrecorded, and the two claims are not the same.
+      clockChipLabel: cfg.includeUnd ? 'unverified clocks INCLUDED' : 'clock disciplined only',
+      toggleUndisciplined: () => this.setState({ includeUnd: !cfg.includeUnd }),
+      minOverlapLabel: dur(cfg.minOverlapSec),
+      bumpMinOverlap: () => {
+        const seq = [1, 5, 15, 60];
+        const cur = cfg.minOverlapSec / 60;
+        this.setState({ minOverlapMin: seq[(seq.indexOf(cur) + 1) % seq.length] });
+      },
+      overlapHeadline: ds ? `${ovHours.toFixed(0)} h of 2+ overlap · ${ov3.toFixed(0)} h of 3+` : '',
+
+      inspectorKicker: insp.kicker, inspectorTitle: insp.title, inspectorBadges: insp.badges,
+      inspectorRows: insp.rows, inspectorNote: insp.note, hasInspectorNote: insp.hasNote,
+      showEditor: !!(st.manage && sel && (sel.recordKind === 'coverage' || sel.recordKind === 'event')),
+      showAddEvent: st.manage,
+      publishOpts: pubOpts,
+      selDisputed: sel ? !!sel.disputed : false,
+      toggleDisputed: () => this.patchSel({ disputed: sel ? !sel.disputed : true }),
+      selDisputeNote: sel ? (sel.disputeNote || '') : '',
+      setDisputeNote: (e) => this.patchSel({ disputeNote: e.target.value }),
+      selConclusion: sel ? (sel.processingConclusion || '') : '',
+      setConclusion: (e) => this.patchSel({ processingConclusion: e.target.value }),
+      newEvtTime: st.newEvt.time, newEvtSource: st.newEvt.source, newEvtBasis: st.newEvt.basis,
+      newEvtUnc: st.newEvt.unc, newEvtLabel: st.newEvt.label,
+      uncLabel: st.newEvt.basis === 'unknown' ? 'Uncertainty — not required when basis is unknown' : 'Uncertainty (± seconds)',
+      uncDisabled: st.newEvt.basis === 'unknown',
+      setNewEvtTime: (e) => this.setState({ newEvt: Object.assign({}, st.newEvt, { time: e.target.value }) }),
+      setNewEvtSource: (e) => this.setState({ newEvt: Object.assign({}, st.newEvt, { source: e.target.value }) }),
+      setNewEvtBasis: (e) => this.setState({ newEvt: Object.assign({}, st.newEvt, { basis: e.target.value }) }),
+      setNewEvtUnc: (e) => this.setState({ newEvt: Object.assign({}, st.newEvt, { unc: e.target.value }) }),
+      setNewEvtLabel: (e) => this.setState({ newEvt: Object.assign({}, st.newEvt, { label: e.target.value }) }),
+      addEvent: () => {
+        const n = st.newEvt, t = Date.parse(n.time.endsWith('Z') ? n.time : n.time + 'Z');
+        if (isNaN(t)) return;
+        const id = 'local_' + Date.now().toString(36);
+        const p = Object.assign({}, st.pending);
+        p[id] = { _added: true, recordKind: 'event', id, eventClass: 'meteor', eventSource: n.source,
+          start: t, uncertaintyBasis: n.basis, uncertaintySec: n.basis === 'unknown' ? null : (parseFloat(n.unc) || null),
+          label: n.label || 'Hand-entered event', publishState: 'draft', provenance: 'manual', disputed: false };
+        this.savePending(p);
+        this.setState({ selId: id, newEvt: { time: '', source: n.source, basis: n.basis, unc: '', label: '' } });
+        this.panTo(t, 20 * M);
+      },
+      legendGroups,
+
+      // campaign
+      campaignStripEl: v === 'campaign' ? this.campaignStrip() : null,
+      matrixEl: v === 'campaign' ? this.matrix() : null,
+      recordCountLabel: ds ? `${ds.coverage.length} coverage · ${ds.events.length} events · ${ds.configs.length + ds.interference.length} context` : '',
+      statCards: stats,
+      matrixModes: [['coverage', 'Coverage'], ['usable', 'Usable only'], ['events', 'Event count']].map(([id, label]) => ({
+        label, checked: st.matrixMode === id,
+        style: `font-size: 16.5px;${st.matrixMode === id ? 'color:' + C.a300 + ';box-shadow:inset 0 0 0 1px ' + C.accent + ';' : ''}`,
+        set: () => this.setState({ matrixMode: id })
+      })),
+
+      // records
+      query: st.query, setQuery: (e) => this.setState({ query: e.target.value }),
+      kindFilters: [['all', 'All'], ['coverage', 'Coverage'], ['event', 'Events'], ['context', 'Config / RFI']].map(([id, label]) => ({
+        label, checked: st.kindFilter === id,
+        style: `font-size: 16.5px;${st.kindFilter === id ? 'color:' + C.a300 + ';box-shadow:inset 0 0 0 1px ' + C.accent + ';' : ''}`,
+        set: () => this.setState({ kindFilter: id })
+      })),
+      publishedOnly: cfg.publishedOnly,
+      togglePublishedOnly: () => this.setState({ publishedOnly: !cfg.publishedOnly }),
+      tableCountLabel: `${tableCount} records${tableCount > 300 ? ' · showing first 300' : ''}`,
+      tableCols: colDefs.map(([key, label]) => ({
+        label: label + (st.sortKey === key ? (st.sortDir > 0 ? ' ↑' : ' ↓') : ''),
+        style: `cursor:pointer;white-space:nowrap;${st.sortKey === key ? 'color:' + C.a300 + ';' : ''}`,
+        sort: () => this.setState({ sortKey: key, sortDir: st.sortKey === key ? -st.sortDir : 1 })
+      })),
+      tableRows,
+      exportCsv: () => {
+        const cols = ['id', 'recordKind', 'instrumentId', 'channel', 'start', 'end', 'validation', 'status', 'lossSeverity', 'clockQuality', 'endBasis', 'publishState', 'disputed', 'provenance', 'label'];
+        const esc = (x) => '"' + String(x == null ? '' : x).replace(/"/g, '""') + '"';
+        const rows = [`# dataset ${ds.meta.datasetVersion} · scanned ${ds.meta.scanTimestamp} · all times UTC`, cols.join(',')];
+        this.records.coverage.concat(this.records.events).forEach((r) => rows.push(cols.map((c) => esc(c === 'start' || c === 'end' ? (r[c] ? new Date(r[c]).toISOString() : '') : r[c])).join(',')));
+        this.download('availability.csv', rows.join('\n'), 'text/csv');
+      },
+      exportJson: () => this.download('availability.json', JSON.stringify({ meta: ds.meta, site: ds.site, coverage: this.records.coverage, events: this.records.events, configs: ds.configs, interference: ds.interference, excluded: ds.broken }, null, 2), 'application/json')
+    };
+  }
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+:root {
+  --bg: #ffffff;
+  --panel: #f6f7f9;
+  --text: #14181f;
+  --muted: #5b6472;
+  --rule: #d8dde5;
+  --accent: #1f4fd8;
+
+  --good: #1f7a4d;
+  --degraded: #b8710d;
+  --lost: #9c2a2a;
+  --overlap: #1f4fd8;
+  --event: #6b3fbf;
+  --unknown: #6b7484;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #10141a;
+    --panel: #171d26;
+    --text: #e6eaf0;
+    --muted: #99a3b2;
+    --rule: #2a323e;
+    --accent: #7ea2ff;
+
+    --good: #4fc78a;
+    --degraded: #e0a445;
+    --lost: #e0645f;
+    --overlap: #7ea2ff;
+    --event: #b18cf5;
+    --unknown: #8a94a4;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0 1.25rem 4rem;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.masthead, #status, main, .colophon { max-width: 62rem; margin-inline: auto; }
+
+.masthead { padding: 2.5rem 0 1rem; }
+.masthead h1 { margin: 0 0 .4rem; font-size: 1.7rem; letter-spacing: -0.01em; }
+.tagline { margin: 0; color: var(--muted); max-width: 46rem; }
+
+.status {
+  margin: 1rem auto;
+  padding: .7rem .9rem;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  font-size: .9rem;
+  color: var(--muted);
+}
+.status.error { border-color: var(--lost); color: var(--lost); }
+
+h2 {
+  margin: 2.5rem 0 .6rem;
+  font-size: 1.15rem;
+  padding-bottom: .35rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.controls { display: flex; align-items: center; gap: .6rem; margin-top: 1.5rem; }
+.controls label { font-size: .9rem; color: var(--muted); }
+select {
+  font: inherit;
+  padding: .3rem .5rem;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+}
+.feed { margin-left: auto; font-size: .82rem; color: var(--muted); }
+
+.scroller { overflow-x: auto; }
+#timeline { display: block; min-width: 40rem; width: 100%; }
+
+.axis-label { fill: var(--muted); font-size: 11px; }
+.row-label { fill: var(--text); font-size: 12px; }
+.grid-line { stroke: var(--rule); stroke-width: 1; }
+.row-base { fill: var(--panel); }
+
+.bar-good { fill: var(--good); }
+.bar-degraded { fill: var(--degraded); }
+.bar-lost { fill: var(--lost); }
+.bar-overlap { fill: var(--overlap); }
+.event-mark { stroke: var(--event); stroke-width: 1.5; }
+
+.legend {
+  display: flex; flex-wrap: wrap; gap: 1rem;
+  list-style: none; margin: .8rem 0 0; padding: 0;
+  font-size: .82rem; color: var(--muted);
+}
+.legend li { display: flex; align-items: center; gap: .4rem; }
+.swatch { width: .85rem; height: .85rem; border-radius: 2px; display: inline-block; }
+.swatch-good { background: var(--good); }
+.swatch-degraded { background: var(--degraded); }
+.swatch-lost { background: var(--lost); }
+.swatch-overlap { background: var(--overlap); }
+.swatch-event { background: var(--event); }
+
+.note { color: var(--muted); font-size: .9rem; max-width: 46rem; }
+
+table { border-collapse: collapse; width: 100%; min-width: 36rem; font-size: .9rem; }
+th, td { text-align: left; padding: .5rem .6rem; border-bottom: 1px solid var(--rule); }
+th { font-weight: 600; color: var(--muted); font-size: .82rem; text-transform: uppercase; letter-spacing: .03em; }
+td time { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.verdict { font-weight: 600; white-space: nowrap; }
+.verdict-covered { color: var(--good); }
+.verdict-partial { color: var(--degraded); }
+.verdict-not_covered { color: var(--lost); }
+.verdict-unknown { color: var(--unknown); }
+.verdict-detail { display: block; font-weight: 400; color: var(--muted); font-size: .82rem; }
+
+.sources { list-style: none; padding: 0; margin: 0; font-size: .9rem; }
+.sources li { padding: .5rem 0; border-bottom: 1px solid var(--rule); }
+.source-status { color: var(--muted); font-size: .82rem; }
+.source-status.error, .source-status.stale { color: var(--degraded); }
+
+.colophon { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--rule); color: var(--muted); font-size: .85rem; }
+.generated { font-variant-numeric: tabular-nums; }
+
+a { color: var(--accent); }
+code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .9em; }
