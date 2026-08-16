@@ -1,0 +1,27 @@
+# Local configuration names paths on the machine holding the data.
+config.toml
+
+# Cached raw responses from external catalogues. Regenerated on demand, and the cache is a courtesy
+# to the services we query, not a build artefact worth versioning.
+/.cache/
+
+# Instrument data. Raw captures are large and belong on the data workstation, not in a public
+# repository -- a single 96 kHz float recording runs to hundreds of megabytes per hour, and once a
+# large file is in the history, getting it out means rewriting the history.
+# Small excerpts kept deliberately as reference samples are re-included below.
+# Anchored to the repository root. Note that neither web/data nor data/ is excluded: both hold
+# generated JSON the site is served from, and that has to be committed.
+/data example/
+*.wav
+*.pkf
+!docs/samples/**
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/

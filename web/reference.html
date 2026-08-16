@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meteor Shower Data Availability</title>
+<meta name="description" content="When our ground-based VLF instruments were recording, and what happened in the sky while they were.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="masthead">
+  <h1>Meteor Shower Data Availability</h1>
+  <p class="tagline">
+    When our ground-based instruments were recording, and what happened in the sky while they were.
+    All times UTC.
+  </p>
+</header>
+
+<div id="status" class="status" role="status" aria-live="polite">Loading the record…</div>
+
+<main id="main" hidden>
+
+  <section class="controls">
+    <label for="year">Year</label>
+    <select id="year"></select>
+    <span id="feed" class="feed"></span>
+  </section>
+
+  <section aria-labelledby="coverage-heading">
+    <h2 id="coverage-heading">Coverage</h2>
+    <div class="scroller">
+      <svg id="timeline" role="img" aria-label="Instrument coverage over time"></svg>
+    </div>
+    <ul class="legend">
+      <li><span class="swatch swatch-good"></span>Recording, clean data</li>
+      <li><span class="swatch swatch-degraded"></span>Recording, data impaired</li>
+      <li><span class="swatch swatch-lost"></span>Running, data unusable</li>
+      <li><span class="swatch swatch-overlap"></span>Two or more instruments</li>
+      <li><span class="swatch swatch-event"></span>Event</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="events-heading">
+    <h2 id="events-heading">Events</h2>
+    <p class="note">
+      Events are reported by the catalogues named beside them. <strong>Not covered</strong> means we
+      know nothing was recording. <strong>Unknown</strong> means we have not characterised that
+      period — it is not a claim of downtime.
+    </p>
+    <div class="scroller">
+      <table id="events">
+        <thead>
+          <tr>
+            <th scope="col">Time (UTC)</th>
+            <th scope="col">Event</th>
+            <th scope="col">Where</th>
+            <th scope="col">Recorded by us?</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="sources-heading">
+    <h2 id="sources-heading">Sources</h2>
+    <ul id="sources" class="sources"></ul>
+  </section>
+
+</main>
+
+<footer class="colophon">
+  <p>
+    Published from the instrument record itself. The data behind this page follows a documented
+    contract; see <code>docs/data-format.md</code> in the repository.
+  </p>
+  <p id="generated" class="generated"></p>
+</footer>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
