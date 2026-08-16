@@ -16,6 +16,14 @@ config.toml
 *.pkf
 !docs/samples/**
 
+# macOS. Finder writes these into every directory it opens, including through Dropbox, so without
+# this they show up as pending changes in any Git client and get committed to a public repo by
+# accident.
+.DS_Store
+
+# Editor / tooling scratch that is specific to one machine.
+.claude/
+
 # Python
 __pycache__/
 *.py[cod]
