@@ -6,7 +6,9 @@ build-backend = "setuptools.build_meta"
 name = "availability"
 version = "0.1.0"
 description = "Instrument availability record: ingest, correlate, publish, serve"
-readme = "../README.md"
+# No `readme` key on purpose. It would have to be ../README.md, and setuptools refuses to read
+# anything above the package root, so naming it fails the build outright rather than degrading.
+# The project README stays at the repository root where it belongs.
 requires-python = ">=3.11"
 license = { text = "MIT" }
 dependencies = []
