@@ -117,7 +117,6 @@ web/                Everything published to GitHub Pages
 docs/               Data format contract, operator notes, CSV templates
 records/            The transcribed 2024 season coverage
 tools/              Extraction scripts, so the transcription is reproducible
-legacy/             The superseded single-file page
 ```
 
 Operational detail — scheduled publishing, serving live, adding a source — is in
