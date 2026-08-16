@@ -1,0 +1,186 @@
+# Instrument availability configuration.
+#
+# Copy to config.toml and edit. config.toml is not committed -- it names paths on the machine that
+# holds the data, which are nobody else's business.
+#
+# Run `python -m availability check --config config.toml` after editing. It runs every source and
+# reports what each one found, without writing anything.
+
+[site]
+title = "Meteor Shower Data Availability"
+
+[output]
+# Where `publish` writes the JSON snapshots. Relative paths resolve against this file.
+directory = "web/data"
+
+# The dashboard reads a dataset in its own shape. Its ids and vocabulary are mapped here rather
+# than in code, so the front end can rename things without the record having to.
+[campaign]
+enabled = false
+# Beside the dashboard's own folder, because the dashboard fetches it relative to itself.
+path = "web/data/2024-campaign.json"
+site_altitude_m = 45
+
+[campaign.instrument_ids]
+"sphere-vlf-seattle" = "sphere_antenna"
+"vectaire-magnetometer-seattle" = "magnetometer"
+"sky-camera-seattle" = "skycam"
+"supersid-seattle" = "supersid"
+"nimbustrace-seattle" = "nimbustrace"
+
+[campaign.provenance]
+"record-2024" = "sheet_2024"
+"ams" = "ams_scrape"
+
+[api]
+# Origins allowed to call the live API from a browser. Empty means no cross-origin access at all,
+# which is the right default: name the origin the front end is actually served from, and nothing
+# else. A published GitHub Pages site is served over HTTPS, so the API must be reachable over HTTPS
+# too or the browser will refuse to call it.
+allowed_origins = ["https://seal-embedded.github.io"]
+
+
+# ---------------------------------------------------------------------------------------------
+# Instruments
+# ---------------------------------------------------------------------------------------------
+
+[[instruments]]
+id = "nimbustrace-seattle"
+name = "NimbusTrace VLF Receiver — Seattle"
+kind = "vlf"
+system = "nimbustrace"
+active = true
+band_hz = { low = 0, high = 50000 }
+site = { id = "seattle", name = "Seattle, Washington", latitude = 47.6553, longitude = -122.3035 }
+
+[[instruments]]
+id = "supersid-seattle"
+name = "SuperSID VLF Receiver — Seattle"
+kind = "vlf"
+system = "supersid"
+active = true
+site = { id = "seattle", name = "Seattle, Washington", latitude = 47.6553, longitude = -122.3035 }
+
+# [[instruments]]
+# id = "skycam-seattle"
+# name = "Sky Camera — Seattle"
+# kind = "sky_camera"
+# system = "skycam"
+# active = false
+
+
+# ---------------------------------------------------------------------------------------------
+# Coverage sources
+# ---------------------------------------------------------------------------------------------
+
+# A hand-maintained record. Use this to backfill history, and to correct anything the automated
+# scans get wrong. Columns: instrument_id, start, end, quality, note.
+[[sources]]
+id = "manual-coverage"
+adapter = "csv_coverage"
+kind = "coverage"
+name = "Manually recorded coverage"
+enabled = false
+path = "docs/templates/coverage.csv"
+
+# Recording files on disk. Coverage is derived from each file's start time and length, with
+# consecutive files stitched into one interval.
+[[sources]]
+id = "nimbustrace-files"
+adapter = "file_scan"
+kind = "coverage"
+name = "NimbusTrace recordings"
+enabled = false
+instrument_id = "nimbustrace-seattle"
+path = "D:/nimbustrace/recordings"
+glob = "**/*.wav"
+timestamp_format = "%Y%m%d_%H%M%S"
+duration_source = "wav"
+gap_tolerance_s = 60
+
+# SuperSID daily logs.
+[[sources]]
+id = "supersid-logs"
+adapter = "supersid"
+kind = "coverage"
+name = "SuperSID daily logs"
+enabled = false
+instrument_id = "supersid-seattle"
+path = "D:/supersid/data"
+glob = "**/*.csv"
+gap_factor = 2
+
+
+# ---------------------------------------------------------------------------------------------
+# Event sources
+# ---------------------------------------------------------------------------------------------
+
+# Events exported by hand. Columns: kind, time, label, location, magnitude, duration_s, source_ref.
+[[sources]]
+id = "manual-events"
+adapter = "csv_events"
+kind = "event"
+name = "Manually recorded events"
+enabled = false
+path = "docs/templates/events.csv"
+
+# American Meteor Society fireball events, read from their public pages.
+#
+# Two stages with very different costs. The listing is one request per fifty events and carries the
+# id, time, countries and states. Magnitude, duration and coordinates are only on each event's own
+# page: one request per event.
+#
+# countries is what actually bounds the work. Worldwide 2024 is roughly 20,000 listed events; the
+# three below are about 5,300. Each of those is a detail page, which is why max_detail_fetches caps
+# a single run and the rest are picked up by later runs. Cached pages are free and never re-fetched
+# once an event has settled.
+#
+# min_reports stays at 1 on purpose. The site defaults to 5, but the fireballs recorded in the 2024
+# season had as few as 2 reports, so anything higher discards real events.
+#
+# The distance filter needs coordinates, so it can only run after the detail fetch. It trims the
+# edges; it does not reduce the request count. Every kept event stores its position, so a different
+# geometry can be applied later without asking AMS for anything again.
+[[sources]]
+id = "ams"
+adapter = "ams_fireballs"
+kind = "event"
+name = "American Meteor Society"
+url = "https://fireball.amsmeteors.org/"
+attribution = "Fireball reports courtesy of the American Meteor Society"
+enabled = false
+years = [2024, 2026]
+min_reports = 1
+countries = ["US", "CA", "MX"]
+
+# Keep only events within reach of the instrument. 5000 km covers North America, Hawaii and
+# Mexico; 3000 km would exclude the eastern United States, and with it most of the 2024 record.
+origin_lat = 47.6553
+origin_lon = -122.3035
+max_distance_km = 5000
+
+fetch_details = true
+max_detail_fetches = 500      # per run; 0 uses only what is already cached
+detail_settle_days = 60       # past this age an event is final and cached indefinitely
+
+cache_dir = ".cache/ams"
+max_age_s = 21600
+delay_s = 2
+
+# The catalogue adapters below are inert until their access terms are settled. Enabling one does
+# not make it fetch anything; it reports why it is switched off.
+[[sources]]
+id = "nasa-fireballs"
+adapter = "nasa_fireballs"
+kind = "event"
+name = "NASA All Sky Fireball Network"
+url = "https://fireballs.ndc.nasa.gov/"
+attribution = "Fireball data courtesy of NASA's All Sky Fireball Network"
+enabled = false
+
+[[sources]]
+id = "launches"
+adapter = "launch_schedule"
+kind = "event"
+name = "Orbital launches"
+enabled = false

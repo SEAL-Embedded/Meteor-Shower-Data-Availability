@@ -1,0 +1,142 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-08-16T10:43:05Z",
+  "range": {
+    "start": "2024-07-26T02:02:00Z",
+    "end": "2024-09-09T01:15:00Z"
+  },
+  "years": [
+    2024
+  ],
+  "instruments": [
+    {
+      "id": "nimbustrace-seattle",
+      "name": "NimbusTrace VLF Receiver — Seattle",
+      "kind": "vlf",
+      "system": "nimbustrace",
+      "site": {
+        "id": "seattle",
+        "name": "Seattle, Washington",
+        "latitude": 47.6553,
+        "longitude": -122.3035
+      },
+      "band_hz": {
+        "low": 0.0,
+        "high": 50000.0
+      },
+      "active": true,
+      "known_range": null
+    },
+    {
+      "id": "supersid-seattle",
+      "name": "SuperSID VLF Receiver — Seattle",
+      "kind": "vlf",
+      "system": "supersid",
+      "site": {
+        "id": "seattle",
+        "name": "Seattle, Washington",
+        "latitude": 47.6553,
+        "longitude": -122.3035
+      },
+      "band_hz": null,
+      "active": true,
+      "known_range": null
+    },
+    {
+      "id": "sphere-vlf-seattle",
+      "name": "Sphere VLF Antenna System — Seattle",
+      "kind": "vlf",
+      "system": "sphere",
+      "site": {
+        "id": "seattle",
+        "name": "Seattle, Washington",
+        "latitude": 47.6553,
+        "longitude": -122.3035
+      },
+      "band_hz": null,
+      "active": false,
+      "known_range": {
+        "start": "2024-07-26T23:40:00Z",
+        "end": "2024-09-09T01:15:00Z"
+      }
+    },
+    {
+      "id": "vectaire-magnetometer-seattle",
+      "name": "Vectaire Magnetometer — Seattle",
+      "kind": "magnetometer",
+      "system": "vectaire",
+      "site": {
+        "id": "seattle",
+        "name": "Seattle, Washington",
+        "latitude": 47.6553,
+        "longitude": -122.3035
+      },
+      "band_hz": null,
+      "active": false,
+      "known_range": {
+        "start": "2024-08-13T19:25:00Z",
+        "end": "2024-09-05T15:29:00Z"
+      }
+    },
+    {
+      "id": "sky-camera-seattle",
+      "name": "Sky Camera — Seattle",
+      "kind": "sky_camera",
+      "system": "skycam",
+      "site": {
+        "id": "seattle",
+        "name": "Seattle, Washington",
+        "latitude": 47.6553,
+        "longitude": -122.3035
+      },
+      "band_hz": null,
+      "active": false,
+      "known_range": {
+        "start": "2024-07-26T02:02:00Z",
+        "end": "2024-09-08T11:56:00Z"
+      }
+    }
+  ],
+  "sources": [
+    {
+      "id": "nimbustrace-captures",
+      "name": "NimbusTrace captures",
+      "kind": "coverage",
+      "url": null,
+      "attribution": null,
+      "fetched_at": null,
+      "status": "disabled",
+      "detail": "turned off in configuration"
+    },
+    {
+      "id": "supersid-audio",
+      "name": "SuperSID recordings",
+      "kind": "coverage",
+      "url": null,
+      "attribution": null,
+      "fetched_at": null,
+      "status": "disabled",
+      "detail": "turned off in configuration"
+    },
+    {
+      "id": "record-2024",
+      "name": "2024 season operating hours",
+      "kind": "coverage",
+      "url": null,
+      "attribution": null,
+      "fetched_at": "2026-08-16T10:42:07Z",
+      "status": "ok",
+      "detail": null
+    },
+    {
+      "id": "ams",
+      "name": "American Meteor Society",
+      "kind": "event",
+      "url": "https://fireball.amsmeteors.org/",
+      "attribution": "Fireball reports courtesy of the American Meteor Society",
+      "fetched_at": "2026-08-16T10:43:05Z",
+      "status": "ok",
+      "detail": "4 beyond 5000 km; 9 kept with no determinable position; served entirely from cache"
+    }
+  ]
+}

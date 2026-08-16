@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "availability"
+version = "0.1.0"
+description = "Instrument availability record: ingest, correlate, publish, serve"
+# No `readme` key on purpose. It would have to be ../README.md, and setuptools refuses to read
+# anything above the package root, so naming it fails the build outright rather than degrading.
+# The project README stays at the repository root where it belongs.
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = []
+
+[project.optional-dependencies]
+api = ["Flask>=3.0"]
+dev = ["Flask>=3.0", "pytest>=8.0"]
+
+[project.scripts]
+availability = "availability.cli:main"
+
+[tool.setuptools]
+packages = ["availability", "availability.core", "availability.ingest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
