@@ -704,11 +704,27 @@ class Component extends DCLogic {
     return out;
   }
 
+  // ── date-axis gutter ─────────────────────────────────────────────────────
+  // Space reserved below a band's plot for its date labels. Derived from the font rather than
+  // picked by eye, because these bands are not laid out in pixels: they keep a fixed viewBox
+  // (~940 units) and scale to fit their container, so a narrow window renders the labels at
+  // around 4 px. Text metrics are not scale-invariant at that size — the reported ascent grows
+  // from 0.96 em to 1.02 em — so a gutter tuned against a wide window collides in a narrow one.
+  // 1.05 em covers the worst case measured, and the caller passes the true bottom of its plot so
+  // the gutter tracks content that grows (another instrument adds a lane).
+  axisGutter(fontSize, plotBottom) {
+    const ascent = fontSize * 1.05, pad = 4;
+    return {
+      height: Math.ceil(pad + ascent + fontSize * 0.3),   // pad + ascent + descender room
+      baseline: plotBottom + pad + ascent
+    };
+  }
+
   // ── campaign ribbon: the always-present frame ────────────────────────────
   ribbon(width) {
     const ds = this.state.ds, C = this.C;
     if (!ds) return null;
-    const L = 138, W = Math.max(240, width - L - 8), h = 100;
+    const L = 138, W = Math.max(240, width - L - 8), axisFont = 13.5;
     const t0 = ds.campaign.start, t1 = ds.campaign.end;
     const x = (t) => L + ((t - t0) / (t1 - t0)) * W;
     const kids = [this.defs()];
@@ -764,9 +780,13 @@ class Component extends DCLogic {
     kids.push(this.e('rect', { key: 'brush', x: bx1 - (bw < 3 ? 1.5 : 0), y: 24, width: bw < 3 ? 3 : bw, height: sy + sh - 23, fill: 'none', stroke: C.accent, strokeWidth: 1.2 }));
     kids.push(this.e('path', { key: 'bh', d: `M${bx1 - 5} 22 L${bx1 + 5} 22 M${bx2 - 5} 22 L${bx2 + 5} 22`, stroke: C.accent, strokeWidth: 2 }));
 
-    // day ticks
+    // day ticks, in a gutter below everything the plot draws. The plot bottom is the foot of the
+    // brush outline, which is the lowest mark in the band; it moves with the instrument count, so
+    // the band's height is derived rather than fixed.
+    const axis = this.axisGutter(axisFont, sy + sh + 1);
+    const h = sy + sh + 1 + axis.height;
     for (let t = t0; t <= t1; t += 7 * 24 * H) {
-      kids.push(this.e('text', { key: 'dt' + t, x: x(t), y: h - 3, fontSize: 13.5, fill: C.n500, textAnchor: 'middle' }, fmt(t, 'day').slice(5)));
+      kids.push(this.e('text', { key: 'dt' + t, x: x(t), y: axis.baseline, fontSize: axisFont, fill: C.n500, textAnchor: 'middle' }, fmt(t, 'day').slice(5)));
     }
 
     return this.e('svg', {
@@ -808,7 +828,14 @@ class Component extends DCLogic {
   contextBand(width) {
     const ds = this.state.ds, C = this.C;
     if (!ds) return null;
-    const L = 138, W = Math.max(240, width - L - 8), h = 50;
+    // The band is coverage lanes over a time axis and nothing else. Its height follows the lanes,
+    // which follow the instrument count, and the axis gets a gutter of its own beneath them so the
+    // labels cannot land on the data.
+    const L = 138, W = Math.max(240, width - L - 8), axisFont = 13.5;
+    const lanesBottom = 17 + Math.max(0, ds.instruments.length - 1) * 4.6 + 3.4;
+    const plotH = lanesBottom + 4;
+    const axis = this.axisGutter(axisFont, plotH);
+    const h = plotH + axis.height;
     const factor = 18;
     let sp = this.span * factor;
     const camp = ds.campaign.end - ds.campaign.start;
@@ -822,32 +849,37 @@ class Component extends DCLogic {
     kids.push(this.e('text', { key: 'l1', x: 0, y: 17, fontSize: 14.5, fill: C.n500 }, 'CONTEXT'));
     kids.push(this.e('text', { key: 'l2', x: 0, y: 34, fontSize: 14, fill: C.n600 }, dur(sp / 1000)));
     kids.push(...this.skyBands(L, W, t0, t1, 4, 9, 2));
+
+    // Time axis, stepped to this band's own span, drawn before the lanes so the rules sit behind
+    // the data rather than over it. It used to step at a fixed 24 h, so the band lost its axis
+    // entirely once the span fell below a day — at ±5 min zoom it drew no ticks and no labels at
+    // all. Reuses the plot's generator so both frames step on the same ladder. Labels thin out by
+    // measured spacing rather than colliding when the band is narrow, and a midnight tick carries
+    // its date instead of "00:00" so a sub-day span still says which day it is. Each rule runs the
+    // full height of the plot and stops at the gutter, directly above its own label.
+    const { ticks } = this.ticks(t0, t1);
+    const tickGap = ticks.length > 1 ? Math.abs(x(ticks[1].t) - x(ticks[0].t)) : W;
+    const labelEvery = Math.max(1, Math.ceil((axisFont * 4.2) / Math.max(tickGap, 1)));
+    ticks.forEach((tk, i) => {
+      kids.push(this.e('line', { key: 'tk' + tk.t, x1: x(tk.t), y1: 3, x2: x(tk.t), y2: plotH, stroke: tk.major ? C.n700 : C.n800, strokeWidth: tk.major ? 1.2 : 1 }));
+      if (i % labelEvery !== 0 && !tk.major) return;
+      const dd = new Date(tk.t);
+      const label = tk.major ? `${dd.getUTCDate()} ${MON[dd.getUTCMonth()]}` : tk.label;
+      kids.push(this.e('text', { key: 'tl' + tk.t, x: x(tk.t) + 4, y: axis.baseline, fontSize: axisFont, fill: tk.major ? C.n400 : C.n500 }, label));
+    });
+
     ds.instruments.forEach((inst, i) => {
       const y = 17 + i * 4.6;
       merge(this.records.coverage.filter((cv) => cv.instrumentId === inst.id && cv.end > t0 && cv.start < t1).map((cv) => [cv.start, cv.end]))
         .forEach(([a, b], j) => kids.push(this.e('rect', { key: 'c' + i + j, x: x(Math.max(a, t0)), y, width: Math.max(0.8, x(Math.min(b, t1)) - x(Math.max(a, t0))), height: 3.4, fill: C.a700 })));
     });
-    this.records.events.filter((ev) => ev.start > t0 && ev.start < t1).forEach((ev, i) => {
-      kids.push(this.e('rect', { key: 'e' + i, x: x(ev.start), y: 17 + ds.instruments.length * 4.6 + 1, width: 0.9, height: 6, fill: C.n500 }));
-    });
-    // day boundaries with labels
-    const d0 = new Date(t0); d0.setUTCHours(0, 0, 0, 0);
-    const dayPx = (W / (t1 - t0)) * 24 * H;
-    const every = dayPx > 84 ? 1 : dayPx > 42 ? 2 : Math.ceil(84 / Math.max(dayPx, 1));
-    let di = 0;
-    for (let t = d0.getTime(); t <= t1; t += 24 * H, di++) {
-      if (t < t0) continue;
-      kids.push(this.e('line', { key: 'db' + t, x1: x(t), y1: 3, x2: x(t), y2: h - 14, stroke: C.n800, strokeWidth: 1 }));
-      if (di % every === 0) {
-        const dd = new Date(t);
-        kids.push(this.e('text', { key: 'dl' + t, x: x(t) + 4, y: h - 3, fontSize: 13.5, fill: C.n500 }, `${dd.getUTCDate()} ${MON[dd.getUTCMonth()]}`));
-      }
-    }
     const bx1 = x(this.state.vs), bx2 = x(this.state.ve);
     const bw = Math.max(2, bx2 - bx1);
-    kids.push(this.e('rect', { key: 'm1', x: L, y: 3, width: Math.max(0, bx1 - L), height: h - 17, fill: C.bg, opacity: 0.6 }));
-    kids.push(this.e('rect', { key: 'm2', x: bx2, y: 3, width: Math.max(0, L + W - bx2), height: h - 17, fill: C.bg, opacity: 0.6 }));
-    kids.push(this.e('rect', { key: 'br', x: bx1, y: 2, width: bw, height: h - 15, fill: 'none', stroke: C.accent, strokeWidth: 1.2 }));
+    // Mask and brush cover the whole plot. They used to stop short of the lowest lane, so the last
+    // instrument stayed undimmed outside the viewport and the brush did not enclose what it framed.
+    kids.push(this.e('rect', { key: 'm1', x: L, y: 3, width: Math.max(0, bx1 - L), height: plotH - 3, fill: C.bg, opacity: 0.6 }));
+    kids.push(this.e('rect', { key: 'm2', x: bx2, y: 3, width: Math.max(0, L + W - bx2), height: plotH - 3, fill: C.bg, opacity: 0.6 }));
+    kids.push(this.e('rect', { key: 'br', x: bx1, y: 2, width: bw, height: plotH - 2, fill: 'none', stroke: C.accent, strokeWidth: 1.2 }));
     return this.e('svg', {
       width: '100%', height: h, viewBox: `0 0 ${L + W + 8} ${h}`, style: { display: 'block', cursor: 'pointer' },
       ref: (el) => this.bindWheel(el),
