@@ -729,64 +729,88 @@ class Component extends DCLogic {
     const x = (t) => L + ((t - t0) / (t1 - t0)) * W;
     const kids = [this.defs()];
 
-    kids.push(this.e('text', { key: 'lb', x: 0, y: 20, fontSize: 14.5, fill: C.n500, letterSpacing: 0.6 }, 'WHOLE CAMPAIGN'));
-    kids.push(this.e('text', { key: 'lb2', x: 0, y: 37, fontSize: 14.5, fill: C.n600 }, '45 days'));
-
-    kids.push(...this.skyBands(L, W, t0, t1, 26, 10, 1));
-    kids.push(this.e('text', { key: 'skl', x: 0, y: 56, fontSize: 13.5, fill: C.n600 }, 'day/night'));
-
-    // per-instrument coverage density rows
+    // Layout. Every gutter label is placed from the band it describes rather than by eye. It used
+    // to be placed by eye, and "day/night" ended up 20 units below the sky strip, level with the
+    // third coverage row — so it read as that instrument's name. The coverage rows themselves
+    // carried no labels at all, which left the two stray labels as the only text beside them.
     const rows = ds.instruments;
-    const rh = 5.8;
+    const skyY = 32, skyH = 10;
+    const rowH = 7, rowGap = 3.4, rowsY = skyY + skyH + 6;
+    const rowY = (i) => rowsY + i * (rowH + rowGap);
+    const sy = rowY(rows.length - 1) + rowH + 6, sh = 15;
+    const plotTop = skyY - 2, plotBottom = sy + sh;
+    // Baseline that optically centres a label on the band it names.
+    const midline = (top, height, font) => top + height / 2 + font * 0.36;
+
+    const days = (t1 - t0) / 86400e3;
+    kids.push(this.e('text', { key: 'lb', x: 0, y: 13, fontSize: 14.5, fill: C.n500, letterSpacing: 0.6 }, 'WHOLE CAMPAIGN'));
+    kids.push(this.e('text', { key: 'lb2', x: 0, y: 27, fontSize: 13.5, fill: C.n600 },
+      `${days.toFixed(days < 10 ? 1 : 0)} days`));
+
+    kids.push(...this.skyBands(L, W, t0, t1, skyY, skyH, 1));
+    kids.push(this.e('text', { key: 'skl', x: 0, y: midline(skyY, skyH, 11), fontSize: 11, fill: C.n600 }, 'day/night'));
+
+    // Coverage density, one row per instrument, each named in the gutter beside its own row.
     rows.forEach((inst, i) => {
-      const y = 40 + i * (rh + 1.6);
-      kids.push(this.e('rect', { key: 'rb' + i, x: L, y, width: W, height: rh, fill: C.n900 }));
+      const y = rowY(i);
+      kids.push(this.e('rect', { key: 'rb' + i, x: L, y, width: W, height: rowH, fill: C.n900 }));
       const ivs = this.mergedFor(inst.id);
       ivs.forEach(([a, b], j) => kids.push(this.e('rect', {
-        key: 'r' + i + '_' + j, x: x(a), y, width: Math.max(0.7, x(b) - x(a)), height: rh, fill: C.a700
+        key: 'r' + i + '_' + j, x: x(a), y, width: Math.max(0.7, x(b) - x(a)), height: rowH, fill: C.a700
       })));
+      kids.push(this.e('text', { key: 'rl' + i, x: 0, y: midline(y, rowH, 9.5), fontSize: 9.5, fill: C.n500 },
+        inst.short || inst.name));
     });
 
-    // event density sparkline
+    // Event density. Both numbers in the label are derived: it used to read a flat "events/6 h",
+    // which is only true of a 45-day campaign cut into 180 bins, and the sparkline carried no
+    // scale at all — so a tall bar could have been three events or thirty.
     const bins = 180, counts = new Array(bins).fill(0);
     this.records.events.forEach((ev) => {
       const k = Math.floor(((ev.start - t0) / (t1 - t0)) * bins);
       if (k >= 0 && k < bins) counts[k]++;
     });
     const mx = Math.max(1, ...counts);
-    const sy = 40 + rows.length * (rh + 1.6) + 4, sh = 15;
     counts.forEach((c, i) => {
       if (!c) return;
       const bh = Math.max(0.8, (c / mx) * sh);
       kids.push(this.e('rect', { key: 'sp' + i, x: L + (W * i) / bins, y: sy + sh - bh, width: W / bins + 0.4, height: bh, fill: C.n600 }));
     });
-    kids.push(this.e('text', { key: 'spl', x: 0, y: sy + 13, fontSize: 13.5, fill: C.n600 }, 'events/6 h'));
+    const binH = (t1 - t0) / bins / 3600e3;
+    kids.push(this.e('text', { key: 'spl', x: 0, y: sy + 6, fontSize: 11, fill: C.n600 },
+      `events / ${binH.toFixed(binH < 10 ? 1 : 0)} h`));
+    kids.push(this.e('text', { key: 'spl2', x: 0, y: sy + 16, fontSize: 9.5, fill: C.n600 },
+      `tallest bar = ${mx}`));
 
-    // shower markers — labels stagger so near-coincident peaks stay readable
+    // Shower peaks. Each line now starts just under its own label rather than at a fixed height,
+    // so a name is visibly attached to the marker it belongs to. Labels stagger across two tiers
+    // so near-coincident peaks stay readable.
     let lastLabelX = -99, tier = 0;
     ds.showers.forEach((sh2, i) => {
       const px = x(sh2.peak);
-      kids.push(this.e('line', { key: 'sw' + i, x1: px, y1: 25, x2: px, y2: sy + sh, stroke: sh2.major ? C.accent : C.n700, strokeWidth: sh2.major ? 1.2 : 0.8, strokeDasharray: sh2.major ? '' : '2 2' }));
       tier = px - lastLabelX < 78 ? 1 - tier : 0;
       lastLabelX = px;
-      kids.push(this.e('text', { key: 'swt' + i, x: px + 5, y: tier ? 22 : 10, fontSize: 13.5, fill: sh2.major ? C.a300 : C.n600 }, sh2.name));
+      const ly = tier ? 24 : 12;
+      kids.push(this.e('line', { key: 'sw' + i, x1: px, y1: ly + 3, x2: px, y2: plotBottom, stroke: sh2.major ? C.accent : C.n700, strokeWidth: sh2.major ? 1.2 : 0.8, strokeDasharray: sh2.major ? '' : '2 2' }));
+      kids.push(this.e('text', { key: 'swt' + i, x: px + 5, y: ly, fontSize: 12, fill: sh2.major ? C.a300 : C.n600 }, sh2.name));
     });
 
     // viewport brush
     const bx1 = x(Math.max(t0, this.state.vs)), bx2 = x(Math.min(t1, this.state.ve));
     const bw = Math.max(1.5, bx2 - bx1);
-    kids.push(this.e('rect', { key: 'bmask1', x: L, y: 25, width: Math.max(0, bx1 - L), height: sy + sh - 25, fill: C.bg, opacity: 0.62 }));
-    kids.push(this.e('rect', { key: 'bmask2', x: bx2, y: 25, width: Math.max(0, L + W - bx2), height: sy + sh - 25, fill: C.bg, opacity: 0.62 }));
-    kids.push(this.e('rect', { key: 'brush', x: bx1 - (bw < 3 ? 1.5 : 0), y: 24, width: bw < 3 ? 3 : bw, height: sy + sh - 23, fill: 'none', stroke: C.accent, strokeWidth: 1.2 }));
-    kids.push(this.e('path', { key: 'bh', d: `M${bx1 - 5} 22 L${bx1 + 5} 22 M${bx2 - 5} 22 L${bx2 + 5} 22`, stroke: C.accent, strokeWidth: 2 }));
+    kids.push(this.e('rect', { key: 'bmask1', x: L, y: plotTop, width: Math.max(0, bx1 - L), height: plotBottom - plotTop, fill: C.bg, opacity: 0.62 }));
+    kids.push(this.e('rect', { key: 'bmask2', x: bx2, y: plotTop, width: Math.max(0, L + W - bx2), height: plotBottom - plotTop, fill: C.bg, opacity: 0.62 }));
+    kids.push(this.e('rect', { key: 'brush', x: bx1 - (bw < 3 ? 1.5 : 0), y: plotTop - 1, width: bw < 3 ? 3 : bw, height: plotBottom - plotTop + 2, fill: 'none', stroke: C.accent, strokeWidth: 1.2 }));
+    kids.push(this.e('path', { key: 'bh', d: `M${bx1 - 5} ${plotTop - 3} L${bx1 + 5} ${plotTop - 3} M${bx2 - 5} ${plotTop - 3} L${bx2 + 5} ${plotTop - 3}`, stroke: C.accent, strokeWidth: 2 }));
 
-    // day ticks, in a gutter below everything the plot draws. The plot bottom is the foot of the
-    // brush outline, which is the lowest mark in the band; it moves with the instrument count, so
-    // the band's height is derived rather than fixed.
-    const axis = this.axisGutter(axisFont, sy + sh + 1);
-    const h = sy + sh + 1 + axis.height;
+    // Date axis, in its own gutter below the plot, in the same "26 Jul" form the context band uses
+    // so the two orientation frames read alike.
+    const axis = this.axisGutter(axisFont, plotBottom + 1);
+    const h = plotBottom + 1 + axis.height;
     for (let t = t0; t <= t1; t += 7 * 24 * H) {
-      kids.push(this.e('text', { key: 'dt' + t, x: x(t), y: axis.baseline, fontSize: axisFont, fill: C.n500, textAnchor: 'middle' }, fmt(t, 'day').slice(5)));
+      const d = new Date(t);
+      kids.push(this.e('text', { key: 'dt' + t, x: x(t), y: axis.baseline, fontSize: axisFont, fill: C.n500, textAnchor: 'middle' },
+        `${d.getUTCDate()} ${MON[d.getUTCMonth()]}`));
     }
 
     return this.e('svg', {
