@@ -18,7 +18,7 @@ directory = "web/data"
 [campaign]
 enabled = false
 # Beside the dashboard's own folder, because the dashboard fetches it relative to itself.
-path = "web/data/2024-campaign.json"
+path = "web/data/campaign.json"
 site_altitude_m = 45
 
 [campaign.instrument_ids]
@@ -184,3 +184,11 @@ adapter = "launch_schedule"
 kind = "event"
 name = "Orbital launches"
 enabled = false
+
+# Reviewed human corrections, exported from the dashboard's manage mode and committed here.
+# The merge policy is scanner-wins: judgement lands (disputed, publish state, conclusions),
+# measurements never do. Anything that does not apply is reported, and --strict refuses over
+# it. See records/corrections.example.json and docs/data-format.md.
+[corrections]
+enabled = true
+path = "records/corrections.json"

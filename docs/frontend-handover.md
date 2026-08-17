@@ -45,7 +45,7 @@ web/
   reference.html                        ← my throwaway renderer, ignore it
 ```
 
-`uploads/`, `DESIGN-NOTES.md` and `.thumbnail` stayed at the root — nothing references them.
+`uploads/`, `design-notes-2026-08.md` and `.thumbnail` stayed at the root — nothing references them.
 
 ---
 

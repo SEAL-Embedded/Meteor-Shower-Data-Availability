@@ -135,6 +135,27 @@ AMS also publishes a documented REST API at <https://www.amsmeteors.org/members/
 key they issue to paid members and invited scientific organisations. It is the sturdier route if this
 ever becomes more trouble than it is worth.
 
+## Correcting a record
+
+Someone spots that a record is wrong, or has been reviewed and cleared. That judgement has to
+survive the next publish, and it has to be seen by a second person before it lands.
+
+1. Make the edit in the dashboard's **Manage data** mode. It is held in that browser only.
+2. **Export patch (JSON)** and save it as `records/corrections.json`.
+3. Open a pull request with that file. **The review is the inspection step** — the diff is short and
+   in plain language, and it says who made the call and when.
+4. The next `publish` merges it.
+
+The policy is that the scanner wins. A correction carries judgement — disputed, a dispute note, a
+processing conclusion, a publish state — and cannot rewrite anything a source measured. If a
+measurement looks wrong, dispute it rather than change it: the record keeps what the source said and
+shows the objection next to it, which is what a reader needs in order to disagree with either of you.
+
+`publish` reports what applied. A correction that names a record the regenerated set no longer holds
+is a warning, and `publish --strict` refuses to write over it rather than dropping it — record ids
+are derived from the instrument and the start time, so a correction can be orphaned by a fix
+upstream, and that is worth stopping for.
+
 ## Adding a data source
 
 1. Write an adapter in `backend/availability/ingest/`, subclassing `Adapter` and decorated with

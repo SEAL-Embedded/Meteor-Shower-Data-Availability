@@ -78,13 +78,20 @@ def status_payload(store: "Store", moment: datetime | None = None) -> dict[str, 
     }
 
 
-def write_campaign(store: "Store", config) -> Path:
-    """Write the dashboard's dataset, in its shape, where it expects to find it."""
+def write_campaign(store: "Store", config, payload: dict | None = None) -> Path:
+    """Write the dashboard's dataset, in its shape, where it expects to find it.
+
+    A caller that already built the payload passes it in. Building it has side effects -- it applies
+    corrections and can raise warnings about ones that did not land -- so it must happen once, and
+    early enough that the operator sees the result before anything is written.
+    """
     from .campaign import campaign_payload
 
     target = config.resolve(config.campaign.path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    return _write(target, campaign_payload(store, config.campaign))
+    if payload is None:
+        payload = campaign_payload(store, config.campaign)
+    return _write(target, payload)
 
 
 def write_snapshot(store: "Store", output_dir: Path) -> list[Path]:

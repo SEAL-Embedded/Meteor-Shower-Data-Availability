@@ -109,12 +109,16 @@
       <div class="scroll" style="flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow-y: auto;">
 
         <div style="display: flex; align-items: center; gap: var(--space-2); padding: 5px var(--space-6); border-bottom: 1px solid var(--color-divider); flex: none;">
-          <span class="mono" style="font-size: 14px; letter-spacing: 0.08em; color: var(--color-neutral-500); flex: none;">JUMP</span>
-          <div style="display: flex; gap: 3px; flex-wrap: wrap;">
-            <sc-for list="{{ presets }}" as="p" hint-placeholder-count="5">
-              <button type="button" class="btn btn-secondary" style="{{ p.style }}" onClick="{{ p.go }}">{{ p.label }}</button>
-            </sc-for>
-          </div>
+          <sc-if value="{{ hasJumps }}" hint-placeholder-val="{{ true }}">
+            <div style="display: flex; align-items: center; gap: var(--space-2); min-width: 0;">
+              <span class="mono" style="font-size: 14px; letter-spacing: 0.08em; color: var(--color-neutral-500); flex: none;">JUMP</span>
+              <div style="display: flex; gap: 3px; flex-wrap: wrap;">
+                <sc-for list="{{ presets }}" as="p" hint-placeholder-count="5">
+                  <button type="button" class="btn btn-secondary" style="{{ p.style }}" title="{{ p.title }}" onClick="{{ p.go }}">{{ p.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
           <div style="display: flex; align-items: center; gap: 5px; margin-left: auto; flex: none;">
             <button type="button" class="btn btn-secondary" style="font-size: 16px; padding: 2px 7px;" onClick="{{ zoomOut }}">−</button>
             <input type="range" min="0" max="1000" value="{{ zoomSlider }}" onInput="{{ onZoomSlider }}" style="width: 104px; accent-color: var(--color-accent);" aria-label="Zoom span, six weeks to ten seconds">
@@ -153,13 +157,16 @@
         </div>
 
         <div style="display: flex; align-items: center; gap: var(--space-4); padding: var(--space-2) var(--space-6) var(--space-3); border-top: 1px solid var(--color-divider); flex-wrap: wrap; flex: none;">
-          <span class="mono" style="font-size: 14px; letter-spacing: 0.08em; color: var(--color-neutral-500); flex: none;">OVERLAP</span>
+          <!-- This bar states what the Overlap 2+ rail above actually counted. It read as a row of
+               loose chips with no verb, so it looked like status badges rather than the filter it
+               is; the sentence says who is speaking and which chips are settings you can change. -->
+          <span style="font-size: 15px; color: var(--color-neutral-400); flex: none;">The <b style="color: var(--color-accent);">Overlap&nbsp;2+</b> rail counts coverage that is</span>
           <div style="display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center;">
-            <span class="tag tag-neutral" style="font-size: 14px;">files intact</span>
-            <span class="tag tag-neutral" style="font-size: 14px;">signal valid</span>
-            <span class="tag" style="{{ clockChipStyle }}" onClick="{{ toggleUndisciplined }}">{{ clockChipLabel }}</span>
-            <span class="tag tag-neutral" style="font-size: 14px;">≥ {{ minOverlapLabel }}</span>
-            <button type="button" class="btn btn-ghost" style="font-size: 16px; padding: 2px 6px;" onClick="{{ bumpMinOverlap }}">change threshold</button>
+            <span class="tag tag-neutral" style="font-size: 14px;" title="Only records whose files are present and readable count toward overlap.">files intact</span>
+            <span class="tag tag-neutral" style="font-size: 14px;" title="Only records an operator or scanner judged usable count toward overlap.">signal valid</span>
+            <span class="tag" style="{{ clockChipStyle }}" onClick="{{ toggleUndisciplined }}" title="Click to include or exclude records whose clock discipline was never recorded. Unverified is not the same as known-bad.">{{ clockChipLabel }}</span>
+            <span class="tag tag-neutral" style="font-size: 14px;" title="Overlaps shorter than this are ignored: a few seconds of intersection is not an analysable window.">and lasts ≥ {{ minOverlapLabel }}</span>
+            <button type="button" class="btn btn-ghost" style="font-size: 16px; padding: 2px 6px;" onClick="{{ bumpMinOverlap }}" title="Cycle the minimum overlap duration">change threshold</button>
           </div>
         </div>
       </div>
@@ -279,7 +286,7 @@
 
       <div style="display: flex; align-items: baseline; gap: var(--space-4); margin-bottom: var(--space-3); flex-wrap: wrap;">
         <h5 style="margin: 0; font-size: 22px;">Whole campaign as a day × hour matrix</h5>
-        <span style="font-size: 16.5px; color: var(--color-neutral-500);">Carried forward from the sheet’s per-instrument tabs. Equal weight per hour, so short windows stay findable — but duration is lost.</span>
+        <span style="font-size: 16.5px; color: var(--color-neutral-500);">Carried forward from the sheet’s per-instrument tabs. Equal weight per hour, so short windows stay findable — but duration, overlap and uncertainty are not shown. Click any cell to open that hour in the Timeline.</span>
         <div class="seg" style="margin-left: auto;">
           <sc-for list="{{ matrixModes }}" as="m" hint-placeholder-count="3">
             <label class="seg-opt" style="{{ m.style }}"><input type="radio" name="mmode" checked="{{ m.checked }}" onChange="{{ m.set }}">{{ m.label }}</label>
@@ -287,7 +294,13 @@
         </div>
       </div>
       <div class="scroll" style="overflow-x: auto; padding-bottom: var(--space-3);">{{ matrixEl }}</div>
-      <p style="max-width: 82ch; font-size: 18.5px; line-height: 1.6; color: var(--color-neutral-400); margin-top: var(--space-4);">Both are above so you can judge §12’s open question. My read: keep the matrix, but as the campaign-scale overview only — it is the fastest way to see a six-week shape and the only view where a lone 20-minute window is as loud as a 20-hour one. It cannot express duration, overlap, or uncertainty, so it should hand off to the timeline on click rather than try to carry quality.</p>
+      <!-- Outside the horizontal scroller on purpose: a legend that scrolls away from the thing it
+           explains is no better than no legend. -->
+      <div style="margin-top: var(--space-2);">{{ matrixLegendEl }}</div>
+      <!-- A paragraph addressed to the lab used to sit here, arguing which of the two campaign
+           views to keep and citing the design brief by section number. It was correspondence about
+           the page, published on the page. What a reader actually needs — what each view can and
+           cannot express, and that a click hands off to the Timeline — is said above each one. -->
     </div>
   </sc-if>
 
@@ -408,7 +421,15 @@ class Component extends DCLogic {
       const el = this.plotRef && this.plotRef.current;
       if (el && !this._observed) { this.ro.observe(el); this._observed = true; }
     }, 300);
-    this._up = () => { this._drag = null; };
+    // A click on empty plot — pressed and released without panning — clears the pinned record.
+    // Without this there is no way to unpin: the first click on any mark pinned it for the rest of
+    // the session, and since the inspector falls back to the pin whenever nothing is under the
+    // cursor, the panel looked permanently stuck on whatever you last touched.
+    this._up = () => {
+      const d = this._drag;
+      this._drag = null;
+      if (d && d.kind === 'pan' && !d.moved && this.state.selId) this.setState({ selId: null });
+    };
     this._move = (e) => this.onWindowMove(e);
     window.addEventListener('mouseup', this._up);
     window.addEventListener('mousemove', this._move);
@@ -704,69 +725,113 @@ class Component extends DCLogic {
     return out;
   }
 
+  // ── date-axis gutter ─────────────────────────────────────────────────────
+  // Space reserved below a band's plot for its date labels. Derived from the font rather than
+  // picked by eye, because these bands are not laid out in pixels: they keep a fixed viewBox
+  // (~940 units) and scale to fit their container, so a narrow window renders the labels at
+  // around 4 px. Text metrics are not scale-invariant at that size — the reported ascent grows
+  // from 0.96 em to 1.02 em — so a gutter tuned against a wide window collides in a narrow one.
+  // 1.05 em covers the worst case measured, and the caller passes the true bottom of its plot so
+  // the gutter tracks content that grows (another instrument adds a lane).
+  axisGutter(fontSize, plotBottom) {
+    const ascent = fontSize * 1.05, pad = 4;
+    return {
+      height: Math.ceil(pad + ascent + fontSize * 0.3),   // pad + ascent + descender room
+      baseline: plotBottom + pad + ascent
+    };
+  }
+
   // ── campaign ribbon: the always-present frame ────────────────────────────
   ribbon(width) {
     const ds = this.state.ds, C = this.C;
     if (!ds) return null;
-    const L = 138, W = Math.max(240, width - L - 8), h = 100;
+    const L = 138, W = Math.max(240, width - L - 8), axisFont = 13.5;
     const t0 = ds.campaign.start, t1 = ds.campaign.end;
     const x = (t) => L + ((t - t0) / (t1 - t0)) * W;
     const kids = [this.defs()];
 
-    kids.push(this.e('text', { key: 'lb', x: 0, y: 20, fontSize: 14.5, fill: C.n500, letterSpacing: 0.6 }, 'WHOLE CAMPAIGN'));
-    kids.push(this.e('text', { key: 'lb2', x: 0, y: 37, fontSize: 14.5, fill: C.n600 }, '45 days'));
-
-    kids.push(...this.skyBands(L, W, t0, t1, 26, 10, 1));
-    kids.push(this.e('text', { key: 'skl', x: 0, y: 56, fontSize: 13.5, fill: C.n600 }, 'day/night'));
-
-    // per-instrument coverage density rows
+    // Layout. Every gutter label is placed from the band it describes rather than by eye. It used
+    // to be placed by eye, and "day/night" ended up 20 units below the sky strip, level with the
+    // third coverage row — so it read as that instrument's name. The coverage rows themselves
+    // carried no labels at all, which left the two stray labels as the only text beside them.
     const rows = ds.instruments;
-    const rh = 5.8;
+    const skyY = 32, skyH = 10;
+    const rowH = 7, rowGap = 3.4, rowsY = skyY + skyH + 6;
+    const rowY = (i) => rowsY + i * (rowH + rowGap);
+    const sy = rowY(rows.length - 1) + rowH + 6, sh = 15;
+    const plotTop = skyY - 2, plotBottom = sy + sh;
+    // Baseline that optically centres a label on the band it names.
+    const midline = (top, height, font) => top + height / 2 + font * 0.36;
+
+    const days = (t1 - t0) / 86400e3;
+    kids.push(this.e('text', { key: 'lb', x: 0, y: 13, fontSize: 14.5, fill: C.n500, letterSpacing: 0.6 }, 'WHOLE CAMPAIGN'));
+    kids.push(this.e('text', { key: 'lb2', x: 0, y: 27, fontSize: 13.5, fill: C.n600 },
+      `${days.toFixed(days < 10 ? 1 : 0)} days`));
+
+    kids.push(...this.skyBands(L, W, t0, t1, skyY, skyH, 1));
+    kids.push(this.e('text', { key: 'skl', x: 0, y: midline(skyY, skyH, 11), fontSize: 11, fill: C.n600 }, 'day/night'));
+
+    // Coverage density, one row per instrument, each named in the gutter beside its own row.
     rows.forEach((inst, i) => {
-      const y = 40 + i * (rh + 1.6);
-      kids.push(this.e('rect', { key: 'rb' + i, x: L, y, width: W, height: rh, fill: C.n900 }));
+      const y = rowY(i);
+      kids.push(this.e('rect', { key: 'rb' + i, x: L, y, width: W, height: rowH, fill: C.n900 }));
       const ivs = this.mergedFor(inst.id);
       ivs.forEach(([a, b], j) => kids.push(this.e('rect', {
-        key: 'r' + i + '_' + j, x: x(a), y, width: Math.max(0.7, x(b) - x(a)), height: rh, fill: C.a700
+        key: 'r' + i + '_' + j, x: x(a), y, width: Math.max(0.7, x(b) - x(a)), height: rowH, fill: C.a700
       })));
+      kids.push(this.e('text', { key: 'rl' + i, x: 0, y: midline(y, rowH, 9.5), fontSize: 9.5, fill: C.n500 },
+        inst.short || inst.name));
     });
 
-    // event density sparkline
+    // Event density. Both numbers in the label are derived: it used to read a flat "events/6 h",
+    // which is only true of a 45-day campaign cut into 180 bins, and the sparkline carried no
+    // scale at all — so a tall bar could have been three events or thirty.
     const bins = 180, counts = new Array(bins).fill(0);
     this.records.events.forEach((ev) => {
       const k = Math.floor(((ev.start - t0) / (t1 - t0)) * bins);
       if (k >= 0 && k < bins) counts[k]++;
     });
     const mx = Math.max(1, ...counts);
-    const sy = 40 + rows.length * (rh + 1.6) + 4, sh = 15;
     counts.forEach((c, i) => {
       if (!c) return;
       const bh = Math.max(0.8, (c / mx) * sh);
       kids.push(this.e('rect', { key: 'sp' + i, x: L + (W * i) / bins, y: sy + sh - bh, width: W / bins + 0.4, height: bh, fill: C.n600 }));
     });
-    kids.push(this.e('text', { key: 'spl', x: 0, y: sy + 13, fontSize: 13.5, fill: C.n600 }, 'events/6 h'));
+    const binH = (t1 - t0) / bins / 3600e3;
+    kids.push(this.e('text', { key: 'spl', x: 0, y: sy + 6, fontSize: 11, fill: C.n600 },
+      `events / ${binH.toFixed(binH < 10 ? 1 : 0)} h`));
+    kids.push(this.e('text', { key: 'spl2', x: 0, y: sy + 16, fontSize: 9.5, fill: C.n600 },
+      `tallest bar = ${mx}`));
 
-    // shower markers — labels stagger so near-coincident peaks stay readable
+    // Shower peaks. Each line now starts just under its own label rather than at a fixed height,
+    // so a name is visibly attached to the marker it belongs to. Labels stagger across two tiers
+    // so near-coincident peaks stay readable.
     let lastLabelX = -99, tier = 0;
     ds.showers.forEach((sh2, i) => {
       const px = x(sh2.peak);
-      kids.push(this.e('line', { key: 'sw' + i, x1: px, y1: 25, x2: px, y2: sy + sh, stroke: sh2.major ? C.accent : C.n700, strokeWidth: sh2.major ? 1.2 : 0.8, strokeDasharray: sh2.major ? '' : '2 2' }));
       tier = px - lastLabelX < 78 ? 1 - tier : 0;
       lastLabelX = px;
-      kids.push(this.e('text', { key: 'swt' + i, x: px + 5, y: tier ? 22 : 10, fontSize: 13.5, fill: sh2.major ? C.a300 : C.n600 }, sh2.name));
+      const ly = tier ? 24 : 12;
+      kids.push(this.e('line', { key: 'sw' + i, x1: px, y1: ly + 3, x2: px, y2: plotBottom, stroke: sh2.major ? C.accent : C.n700, strokeWidth: sh2.major ? 1.2 : 0.8, strokeDasharray: sh2.major ? '' : '2 2' }));
+      kids.push(this.e('text', { key: 'swt' + i, x: px + 5, y: ly, fontSize: 12, fill: sh2.major ? C.a300 : C.n600 }, sh2.name));
     });
 
     // viewport brush
     const bx1 = x(Math.max(t0, this.state.vs)), bx2 = x(Math.min(t1, this.state.ve));
     const bw = Math.max(1.5, bx2 - bx1);
-    kids.push(this.e('rect', { key: 'bmask1', x: L, y: 25, width: Math.max(0, bx1 - L), height: sy + sh - 25, fill: C.bg, opacity: 0.62 }));
-    kids.push(this.e('rect', { key: 'bmask2', x: bx2, y: 25, width: Math.max(0, L + W - bx2), height: sy + sh - 25, fill: C.bg, opacity: 0.62 }));
-    kids.push(this.e('rect', { key: 'brush', x: bx1 - (bw < 3 ? 1.5 : 0), y: 24, width: bw < 3 ? 3 : bw, height: sy + sh - 23, fill: 'none', stroke: C.accent, strokeWidth: 1.2 }));
-    kids.push(this.e('path', { key: 'bh', d: `M${bx1 - 5} 22 L${bx1 + 5} 22 M${bx2 - 5} 22 L${bx2 + 5} 22`, stroke: C.accent, strokeWidth: 2 }));
+    kids.push(this.e('rect', { key: 'bmask1', x: L, y: plotTop, width: Math.max(0, bx1 - L), height: plotBottom - plotTop, fill: C.bg, opacity: 0.62 }));
+    kids.push(this.e('rect', { key: 'bmask2', x: bx2, y: plotTop, width: Math.max(0, L + W - bx2), height: plotBottom - plotTop, fill: C.bg, opacity: 0.62 }));
+    kids.push(this.e('rect', { key: 'brush', x: bx1 - (bw < 3 ? 1.5 : 0), y: plotTop - 1, width: bw < 3 ? 3 : bw, height: plotBottom - plotTop + 2, fill: 'none', stroke: C.accent, strokeWidth: 1.2 }));
+    kids.push(this.e('path', { key: 'bh', d: `M${bx1 - 5} ${plotTop - 3} L${bx1 + 5} ${plotTop - 3} M${bx2 - 5} ${plotTop - 3} L${bx2 + 5} ${plotTop - 3}`, stroke: C.accent, strokeWidth: 2 }));
 
-    // day ticks
+    // Date axis, in its own gutter below the plot, in the same "26 Jul" form the context band uses
+    // so the two orientation frames read alike.
+    const axis = this.axisGutter(axisFont, plotBottom + 1);
+    const h = plotBottom + 1 + axis.height;
     for (let t = t0; t <= t1; t += 7 * 24 * H) {
-      kids.push(this.e('text', { key: 'dt' + t, x: x(t), y: h - 3, fontSize: 13.5, fill: C.n500, textAnchor: 'middle' }, fmt(t, 'day').slice(5)));
+      const d = new Date(t);
+      kids.push(this.e('text', { key: 'dt' + t, x: x(t), y: axis.baseline, fontSize: axisFont, fill: C.n500, textAnchor: 'middle' },
+        `${d.getUTCDate()} ${MON[d.getUTCMonth()]}`));
     }
 
     return this.e('svg', {
@@ -800,6 +865,7 @@ class Component extends DCLogic {
       this.panTo(Math.max(d.t0, Math.min(d.t1, t)));
     } else if (d.kind === 'pan') {
       const dt = ((d.x - ev.clientX) / d.plotW) * d.span;
+      if (Math.abs(d.x - ev.clientX) > 3) d.moved = true;
       this.setState({ vs: d.vs + dt, ve: d.ve + dt });
     }
   }
@@ -808,7 +874,14 @@ class Component extends DCLogic {
   contextBand(width) {
     const ds = this.state.ds, C = this.C;
     if (!ds) return null;
-    const L = 138, W = Math.max(240, width - L - 8), h = 50;
+    // The band is coverage lanes over a time axis and nothing else. Its height follows the lanes,
+    // which follow the instrument count, and the axis gets a gutter of its own beneath them so the
+    // labels cannot land on the data.
+    const L = 138, W = Math.max(240, width - L - 8), axisFont = 13.5;
+    const lanesBottom = 17 + Math.max(0, ds.instruments.length - 1) * 4.6 + 3.4;
+    const plotH = lanesBottom + 4;
+    const axis = this.axisGutter(axisFont, plotH);
+    const h = plotH + axis.height;
     const factor = 18;
     let sp = this.span * factor;
     const camp = ds.campaign.end - ds.campaign.start;
@@ -822,32 +895,37 @@ class Component extends DCLogic {
     kids.push(this.e('text', { key: 'l1', x: 0, y: 17, fontSize: 14.5, fill: C.n500 }, 'CONTEXT'));
     kids.push(this.e('text', { key: 'l2', x: 0, y: 34, fontSize: 14, fill: C.n600 }, dur(sp / 1000)));
     kids.push(...this.skyBands(L, W, t0, t1, 4, 9, 2));
+
+    // Time axis, stepped to this band's own span, drawn before the lanes so the rules sit behind
+    // the data rather than over it. It used to step at a fixed 24 h, so the band lost its axis
+    // entirely once the span fell below a day — at ±5 min zoom it drew no ticks and no labels at
+    // all. Reuses the plot's generator so both frames step on the same ladder. Labels thin out by
+    // measured spacing rather than colliding when the band is narrow, and a midnight tick carries
+    // its date instead of "00:00" so a sub-day span still says which day it is. Each rule runs the
+    // full height of the plot and stops at the gutter, directly above its own label.
+    const { ticks } = this.ticks(t0, t1);
+    const tickGap = ticks.length > 1 ? Math.abs(x(ticks[1].t) - x(ticks[0].t)) : W;
+    const labelEvery = Math.max(1, Math.ceil((axisFont * 4.2) / Math.max(tickGap, 1)));
+    ticks.forEach((tk, i) => {
+      kids.push(this.e('line', { key: 'tk' + tk.t, x1: x(tk.t), y1: 3, x2: x(tk.t), y2: plotH, stroke: tk.major ? C.n700 : C.n800, strokeWidth: tk.major ? 1.2 : 1 }));
+      if (i % labelEvery !== 0 && !tk.major) return;
+      const dd = new Date(tk.t);
+      const label = tk.major ? `${dd.getUTCDate()} ${MON[dd.getUTCMonth()]}` : tk.label;
+      kids.push(this.e('text', { key: 'tl' + tk.t, x: x(tk.t) + 4, y: axis.baseline, fontSize: axisFont, fill: tk.major ? C.n400 : C.n500 }, label));
+    });
+
     ds.instruments.forEach((inst, i) => {
       const y = 17 + i * 4.6;
       merge(this.records.coverage.filter((cv) => cv.instrumentId === inst.id && cv.end > t0 && cv.start < t1).map((cv) => [cv.start, cv.end]))
         .forEach(([a, b], j) => kids.push(this.e('rect', { key: 'c' + i + j, x: x(Math.max(a, t0)), y, width: Math.max(0.8, x(Math.min(b, t1)) - x(Math.max(a, t0))), height: 3.4, fill: C.a700 })));
     });
-    this.records.events.filter((ev) => ev.start > t0 && ev.start < t1).forEach((ev, i) => {
-      kids.push(this.e('rect', { key: 'e' + i, x: x(ev.start), y: 17 + ds.instruments.length * 4.6 + 1, width: 0.9, height: 6, fill: C.n500 }));
-    });
-    // day boundaries with labels
-    const d0 = new Date(t0); d0.setUTCHours(0, 0, 0, 0);
-    const dayPx = (W / (t1 - t0)) * 24 * H;
-    const every = dayPx > 84 ? 1 : dayPx > 42 ? 2 : Math.ceil(84 / Math.max(dayPx, 1));
-    let di = 0;
-    for (let t = d0.getTime(); t <= t1; t += 24 * H, di++) {
-      if (t < t0) continue;
-      kids.push(this.e('line', { key: 'db' + t, x1: x(t), y1: 3, x2: x(t), y2: h - 14, stroke: C.n800, strokeWidth: 1 }));
-      if (di % every === 0) {
-        const dd = new Date(t);
-        kids.push(this.e('text', { key: 'dl' + t, x: x(t) + 4, y: h - 3, fontSize: 13.5, fill: C.n500 }, `${dd.getUTCDate()} ${MON[dd.getUTCMonth()]}`));
-      }
-    }
     const bx1 = x(this.state.vs), bx2 = x(this.state.ve);
     const bw = Math.max(2, bx2 - bx1);
-    kids.push(this.e('rect', { key: 'm1', x: L, y: 3, width: Math.max(0, bx1 - L), height: h - 17, fill: C.bg, opacity: 0.6 }));
-    kids.push(this.e('rect', { key: 'm2', x: bx2, y: 3, width: Math.max(0, L + W - bx2), height: h - 17, fill: C.bg, opacity: 0.6 }));
-    kids.push(this.e('rect', { key: 'br', x: bx1, y: 2, width: bw, height: h - 15, fill: 'none', stroke: C.accent, strokeWidth: 1.2 }));
+    // Mask and brush cover the whole plot. They used to stop short of the lowest lane, so the last
+    // instrument stayed undimmed outside the viewport and the brush did not enclose what it framed.
+    kids.push(this.e('rect', { key: 'm1', x: L, y: 3, width: Math.max(0, bx1 - L), height: plotH - 3, fill: C.bg, opacity: 0.6 }));
+    kids.push(this.e('rect', { key: 'm2', x: bx2, y: 3, width: Math.max(0, L + W - bx2), height: plotH - 3, fill: C.bg, opacity: 0.6 }));
+    kids.push(this.e('rect', { key: 'br', x: bx1, y: 2, width: bw, height: plotH - 2, fill: 'none', stroke: C.accent, strokeWidth: 1.2 }));
     return this.e('svg', {
       width: '100%', height: h, viewBox: `0 0 ${L + W + 8} ${h}`, style: { display: 'block', cursor: 'pointer' },
       ref: (el) => this.bindWheel(el),
@@ -933,21 +1011,29 @@ class Component extends DCLogic {
     ticks.forEach((tk, i) => {
       const tx = x(tk.t);
       kids.push(this.e('line', { key: 'g' + i, x1: tx, y1: AX - 6, x2: tx, y2: 1e4, stroke: tk.major ? C.n800 : C.n900, strokeWidth: 1 }));
-      kids.push(this.e('text', { key: 't' + i, x: tx, y: 47, fontSize: 14.5, fill: C.n500, textAnchor: 'middle' }, tk.label));
+      // Centred on its tick, the first and last labels overhang the plot by half their width.
+      // Nudge those two so the text box stays inside; the rest are unmoved.
+      const halfW = tk.label.length * 14.5 * 0.28;
+      const lx = Math.max(L + halfW, Math.min(L + W - halfW, tx));
+      kids.push(this.e('text', { key: 't' + i, x: lx, y: 47, fontSize: 14.5, fill: C.n500, textAnchor: 'middle' }, tk.label));
     });
     kids.push(this.e('line', { key: 'axl', x1: 0, y1: AX - 1, x2: L + W, y2: AX - 1, stroke: C.n800, strokeWidth: 1 }));
     kids.push(this.e('line', { key: 'gut', x1: L - 1, y1: 0, x2: L - 1, y2: 1e4, stroke: C.n800, strokeWidth: 1 }));
 
-    // ── sensitivity strip
+    // ── sensitivity strip. The gap above it is not just breathing room: the cursor's time readout
+    // lives in it. That readout used to sit on the axis and mask the date labels behind it, which
+    // traded one reading for another — you could see where the cursor was or what month it was, not
+    // both. Giving it its own band below the rule keeps the axis intact.
+    y += 22;
     kids.push(...this.skyBands(L, W, t0, t1, y, SKY, 2));
-    kids.push(this.e('text', { key: 'skl', x: 0, y: y + 10, fontSize: 14.5, fill: C.n400 }, 'Sky sensitivity'));
+    kids.push(this.e('text', { key: 'skl', x: 0, y: y + SKY / 2 + 5, fontSize: 14.5, fill: C.n400 }, 'Sky sensitivity'));
     y += SKY + 8;
 
     // ── coverage lanes: instruments and events split the free height evenly,
     // so the chart fills its container instead of ending halfway down.
     const rows = this.laneRows();
     const OVH = 30, INTH = 20;
-    const chrome = AX + SKY + 8 + 8 + OVH + 6 + INTH + 5 + 12;
+    const chrome = AX + 22 + SKY + 8 + 8 + OVH + 6 + INTH + 5 + 12;
     const free = Math.max(200, (this.state.plotH || 460) - chrome);
     const laneBudget = free * 0.52, evBudget = free * 0.48;
     const totalW = rows.reduce((a, r) => a + r.w, 0) || 1;
@@ -955,6 +1041,11 @@ class Component extends DCLogic {
     const evh = Math.max(24, Math.min(110, evBudget / 4));
     const capH = Math.max(5, Math.min(13, evh * 0.28));
     const configs = ds.configs;
+    // Instruments the record holds nothing for anywhere — in the 2024 season that is NimbusTrace
+    // and SuperSID, neither of which existed yet. Their lanes never respond to a hover and never
+    // draw a mark, which reads as a broken row rather than as an instrument that was not there.
+    // Saying so is also the honest reading of the data: no record is not a record of downtime.
+    const everRecorded = new Set(this.records.coverage.map((c) => c.instrumentId));
     rows.forEach((row, ri) => {
       const ry = y, rh = row.h;
       kids.push(this.e('rect', { key: 'lb' + ri, x: 0, y: ry, width: L + W, height: rh, fill: ri % 2 ? C.text : 'none', opacity: ri % 2 ? 0.035 : 1 }));
@@ -971,6 +1062,10 @@ class Component extends DCLogic {
       kids.push(this.e('text', { key: 'ln' + ri, x: 0, y: ry + rh / 2 + 5.6, fontSize: nameSize, fill: row.kind === 'inst' ? C.n300 : C.n400, style: { cursor: 'pointer' } }, name));
       if (row.kind === 'chan') {
         kids.push(this.e('text', { key: 'lc' + ri, x: L - 8, y: ry + rh / 2 + 5.6, fontSize: 14.5, fill: C.n500, textAnchor: 'end' }, row.ch.label));
+      }
+      if (row.first && !everRecorded.has(row.inst.id)) {
+        kids.push(this.e('text', { key: 'lne' + ri, x: L + 10, y: ry + rh / 2 + 5, fontSize: 14, fill: C.n600 },
+          'no record for this instrument — absence here is not downtime'));
       }
       hits.push({ type: 'lane', x1: 0, x2: L - 2, y1: ry, y2: ry + rh, instId: row.inst.id });
 
@@ -1029,7 +1124,12 @@ class Component extends DCLogic {
             key: 'ls' + ri + ci, x: x1, y: by + bh - lh - 0.4, width: w, height: lh,
             fill: C.n300, opacity: c.lossSeverity === 'major' ? 0.95 : 0.55
           }));
-          if (c.lossSeverity === 'minor') kids.push(this.e('line', {
+          // The dash that marks minor loss is a texture, and a texture needs room to read. It is
+          // stroked in the background colour, and its first dash is 2 units wide — so on a strip at
+          // the 1.6-unit minimum it painted out the middle of the mark and left two slivers, which
+          // is what a minor loss looked like at campaign zoom. Below the width where the pattern
+          // means anything, fall back to the opacity difference, which already encodes severity.
+          if (c.lossSeverity === 'minor' && w >= 6) kids.push(this.e('line', {
             key: 'ls2' + ri + ci, x1, y1: by + bh - lh / 2 - 0.4, x2: x1 + w, y2: by + bh - lh / 2 - 0.4,
             stroke: C.bg, strokeWidth: Math.max(0.8, lh * 0.5), strokeDasharray: '2 3'
           }));
@@ -1074,7 +1174,8 @@ class Component extends DCLogic {
     // ── overlap lane
     y += 8;
     kids.push(this.e('text', { key: 'ovl', x: 0, y: y + 14, fontSize: 16.5, fill: C.a300 }, 'Overlap 2+'));
-    kids.push(this.e('text', { key: 'ovl2', x: 0, y: y + 28, fontSize: 14, fill: C.n600 }, 'usable only'));
+    // 31, not 28: at 16.5 over 14 the two baselines were 14 apart and their ink overlapped by one.
+    kids.push(this.e('text', { key: 'ovl2', x: 0, y: y + 31, fontSize: 14, fill: C.n600 }, 'usable only'));
     const ovh = OVH;
     kids.push(this.e('rect', { key: 'ovbg', x: L, y, width: W, height: ovh, fill: C.n900, opacity: 0.6 }));
     const ovAll = this.overlapSegments();
@@ -1154,6 +1255,11 @@ class Component extends DCLogic {
           `${evs.length} reports in view — binned; zoom in for uncertainty intervals`));
         return;
       }
+      // Where each event's mark actually got drawn, so a label can be anchored to the mark rather
+      // than recomputed from the timestamp. Labels used to hang off the best-estimate tick, which
+      // sits inside the uncertainty interval — so the text started somewhere in the middle of its
+      // own mark, and where the estimate was off-centre it started in a different place each time.
+      const spans = [];
       evs.forEach((ev, ei) => {
         let lo, hi, treat = 'interval';
         if (ev.uncertaintyBasis === 'unknown' || ev.uncertaintySec == null) {
@@ -1177,7 +1283,9 @@ class Component extends DCLogic {
           const cx2 = clampX(x(ev.start + cw));
           if (ev.eventEnd) kids.push(this.e('line', { key: 'em' + si + ei, x1: ax, y1: cy - capH - 2, x2: clampX(x(ev.eventEnd)), y2: cy - capH - 2, stroke: C.n700, strokeWidth: 1, strokeDasharray: '2 4' }));
           kids.push(this.e('rect', { key: 'ec' + si + ei, x: ax, y: cy - capH * 0.8, width: Math.max(2.5, cx2 - ax), height: capH * 1.6, fill: col, opacity: 0.9 }));
-          if (cx2 - ax > 40) kids.push(this.e('text', { key: 'ect' + si + ei, x: cx2 + 4, y: cy + 4.5, fontSize: 14, fill: C.n500 }, 'ionospheric window ≈10 min'));
+          // ~185 units of text. Drawn from a clamped edge it ran off the right of the plot, so it
+          // is only drawn where it actually fits.
+          if (cx2 - ax > 40 && cx2 + 4 + 185 < L + W) kids.push(this.e('text', { key: 'ect' + si + ei, x: cx2 + 4, y: cy + 4.5, fontSize: 14, fill: C.n500 }, 'ionospheric window ≈10 min'));
         } else {
           const narrow = wpx < 4;
           const w = narrow ? 4 : wpx;
@@ -1185,16 +1293,57 @@ class Component extends DCLogic {
           kids.push(this.e('line', { key: 'ei' + si + ei, x1: ax2, y1: cy, x2: ax2 + w, y2: cy, stroke: col, strokeWidth: sel ? 2.4 : 1.5 }));
           kids.push(this.e('line', { key: 'e1' + si + ei, x1: ax2, y1: cy - capH, x2: ax2, y2: cy + capH, stroke: col, strokeWidth: sel ? 2 : 1.2 }));
           kids.push(this.e('line', { key: 'e2' + si + ei, x1: ax2 + w, y1: cy - capH, x2: ax2 + w, y2: cy + capH, stroke: col, strokeWidth: sel ? 2 : 1.2 }));
-          if (!narrow && wpx > 9) kids.push(this.e('rect', { key: 'e3' + si + ei, x: x(ev.start) - 1.1, y: cy - capH * 0.62, width: 2.2, height: capH * 1.24, fill: col }));
+          // The interval ends are clamped, but the best-estimate tick and the disputed flag were
+          // positioned from the raw time. An event whose interval overlaps the viewport while its
+          // best estimate sits outside it drew these past the edge of the plot.
+          if (!narrow && wpx > 9) kids.push(this.e('rect', { key: 'e3' + si + ei, x: clampX(x(ev.start)) - 1.1, y: cy - capH * 0.62, width: 2.2, height: capH * 1.24, fill: col }));
           if (narrow) kids.push(this.e('text', { key: 'e4' + si + ei, x: ax2 + w / 2, y: cy - capH - 2, fontSize: 12, fill: C.n600, textAnchor: 'middle' }, '±'));
-          if (ev.disputed) kids.push(this.e('text', { key: 'e5' + si + ei, x: ax2 + w + 4, y: cy + 4.5, fontSize: 14.5, fill: C.a300, fontWeight: 600 }, '!'));
+          if (ev.disputed) kids.push(this.e('text', { key: 'e5' + si + ei, x: Math.min(ax2 + w + 4, L + W - 6), y: cy + 4.5, fontSize: 14.5, fill: C.a300, fontWeight: 600 }, '!'));
         }
         hits.push({ type: 'rec', rec: ev, x1: Math.min(ax, bx) - 3, x2: Math.max(ax, bx) + 3, y1: cy - 7, y2: cy + 7 });
+        spans.push({ ev, left: Math.min(ax, bx), right: Math.max(ax, bx) });
       });
+      // Event labels, placed left to right into slots as wide as the longest label in view. One is
+      // drawn only where a whole free slot remains since the last one placed; the rest are left
+      // unlabelled, and their marks are still there to hover. Every label used to be drawn
+      // regardless, capped at an arbitrary fourteen: at a dense hour that put 14 labels on the row
+      // forming 52 overlapping pairs, which is unreadable and hides the very thing it names.
+      //
+      // Uniform slots rather than each label's own width, deliberately. Measuring each one lets a
+      // short label squeeze between two long ones, so how crowded the row looks depends on which
+      // events happen to fall in it rather than on how far you have zoomed — the row would thin out
+      // and refill as you pan, which reads as flicker rather than as information.
+      //
+      // Width comes from textWidth(), the same estimate the lane names are clipped with, rather
+      // than a second constant kept in step by hand. It assumes 0.55 em per character against a
+      // measured 0.436-0.474 for these labels, so it errs wide: over-estimating costs a label,
+      // under-estimating puts them back on top of each other. Widths are viewBox units, the space
+      // the marks are laid out in, so this holds at any window size.
+      const LABEL_FONT = 14, LABEL_GAP = 12;
       if (span < 3 * H && evs.length <= 260) {
-        evs.filter((ev) => ev.start > t0 && ev.start < t1).slice(0, 14).forEach((ev, ei) => {
-          if (!ev.label) return;
-          kids.push(this.e('text', { key: 'el' + si + ei, x: x(ev.start) + 7, y: cy - capH - 3, fontSize: 14, fill: C.n500 }, ev.label));
+        // Anchored to the mark's own left edge, so the text starts where the event's interval
+        // starts and the two read as one object. Where a slot will not fit to the right — these
+        // labels run to 58 characters — it hangs off the right edge instead, still flush with the
+        // mark rather than floating away from it.
+        const inView = spans.filter((s) => s.ev.label);
+        const longest = inView.reduce((t, s) => (s.ev.label.length > t.length ? s.ev.label : t), '');
+        const slot = this.textWidth(longest, LABEL_FONT);
+        let filled = -Infinity;
+        inView.forEach((s, ei) => {
+          const ev = s.ev;
+          const flip = s.left + slot > L + W;
+          const from = flip ? s.right - slot : s.left;
+          // The slot has to start inside the plot as well as clear of the last label placed. A
+          // flipped one runs leftward, so without the first of these it walks off the left edge and
+          // across the lane names -- and on a narrow window, where a slot is wider than the plot,
+          // every label flips. None is then drawn, which is the honest answer: the marks are still
+          // there to hover, and a row of labels nothing can be read from is worse than no row.
+          if (from < Math.max(L, filled + LABEL_GAP)) return;
+          kids.push(this.e('text', {
+            key: 'el' + si + ei, x: flip ? s.right : s.left, y: cy - capH - 3,
+            fontSize: LABEL_FONT, fill: C.n500, textAnchor: flip ? 'end' : 'start'
+          }, ev.label));
+          filled = from + slot;
         });
       }
     });
@@ -1202,9 +1351,13 @@ class Component extends DCLogic {
 
     // Crosshair: always present, moved by direct DOM writes on mousemove so the
     // whole plot is not re-rendered per pixel.
-    kids.push(this.e('line', { key: 'ch', id: 'xh-l', x1: -99, y1: 22, x2: -99, y2: y, stroke: C.accent, strokeWidth: 0.8, opacity: 0.55 }));
-    kids.push(this.e('rect', { key: 'chb', id: 'xh-b', x: -199, y: 22, width: 160, height: 20, fill: C.bg, opacity: 0.9 }));
-    kids.push(this.e('text', { key: 'cht', id: 'xh-t', x: -99, y: 37, fontSize: 14.5, fill: C.a300, textAnchor: 'middle' }, ''));
+    // The crosshair starts at the axis rule rather than above it, so it no longer draws through the
+    // date labels on its way down.
+    kids.push(this.e('line', { key: 'ch', id: 'xh-l', x1: -99, y1: AX - 1, x2: -99, y2: y, stroke: C.accent, strokeWidth: 0.8, opacity: 0.55 }));
+    // The time readout sits in the reserved band below the axis, not on top of it. Tick glyphs run
+    // 32.5 to 50.1; this sits at 60 to 74, so the month and date behind the cursor stay readable.
+    kids.push(this.e('rect', { key: 'chb', id: 'xh-b', x: -199, y: 60, width: 160, height: 18, rx: 2, fill: C.bg, opacity: 0.95 }));
+    kids.push(this.e('text', { key: 'cht', id: 'xh-t', x: -99, y: 74, fontSize: 14.5, fill: C.a300, textAnchor: 'middle' }, ''));
 
     this._hits = hits;
     this._plotGeom = { L, W, t0, t1, vbw: L + W + 12 };
@@ -1221,9 +1374,13 @@ class Component extends DCLogic {
     const L = 152, W = 1080, t0 = ds.campaign.start, t1 = ds.campaign.end;
     const x = (t) => L + ((t - t0) / (t1 - t0)) * W;
     const kids = [this.defs()];
-    let y = 16;
-    kids.push(...this.skyBands(L, W, t0, t1, 0, 8, 1));
-    kids.push(this.e('text', { key: 'sl', x: 0, y: 8, fontSize: 14, fill: C.n600 }, 'day/night'));
+    // The day/night strip sat at y 0, hard against the top of the viewBox, so its label — baseline
+    // 8, ascending about 13 — had its top half clipped away by the edge. The strip needs a margin
+    // above it big enough for the label's ascender.
+    const TOP = 12, SKYH = 8;
+    let y = TOP + SKYH + 8;
+    kids.push(...this.skyBands(L, W, t0, t1, TOP, SKYH, 1));
+    kids.push(this.e('text', { key: 'sl', x: 0, y: TOP + SKYH / 2 + 5, fontSize: 14, fill: C.n600 }, 'day/night'));
     ds.instruments.forEach((inst, i) => {
       const ry = y + i * 29;
       kids.push(this.e('text', { key: 'l' + i, x: 0, y: ry + 17, fontSize: 15.5, fill: C.n300 }, inst.short));
@@ -1241,11 +1398,29 @@ class Component extends DCLogic {
       fill: s.free ? 'url(#p-hatch)' : C.a500
     })));
     y += 26;
+    // Shower names drop to a second line where the one above is still occupied. On one line the
+    // S. δ-Aquariids and the α-Capricornids overlapped by 86 units: they peak eight hours apart,
+    // which at campaign scale is eight units, and their names are a hundred wide. The timeline's
+    // ribbon already tiers for the same reason; this strip did not.
+    // 18 rather than the font's own 14: a 14-unit font occupies a 16.7-unit em box, so tiers a
+    // line-height apart still overlap by three.
+    const TIER = 18, tierFree = [-1e9, -1e9];
     ds.showers.forEach((sh, i) => {
-      kids.push(this.e('line', { key: 'sw' + i, x1: x(sh.peak), y1: 8, x2: x(sh.peak), y2: y, stroke: sh.major ? C.accent : C.n700, strokeWidth: sh.major ? 1.2 : 0.8, strokeDasharray: sh.major ? '' : '2 2' }));
-      kids.push(this.e('text', { key: 'st' + i, x: x(sh.peak) + 3, y: y + 10, fontSize: 14, fill: sh.major ? C.a300 : C.n500 }, sh.name));
+      const px = x(sh.peak);
+      let tier = tierFree.findIndex((edge) => px + 3 >= edge);
+      if (tier < 0) tier = 0;
+      tierFree[tier] = px + 3 + this.textWidth(sh.name, 14) + 10;
+      // Every marker stops at the top of the label block, whatever tier its own name landed on. A
+      // line carried down to its own tier crosses each row above it: the α-Capricornids marker,
+      // eight units from the δ-Aquariids, ran straight through that label's text. Association is
+      // carried by the x position instead, which is what the reader follows anyway.
+      // Stops five units short of y, not at it: the first tier's baseline is y + 10 and its
+      // ascender reaches about y - 3.5, so a line ending exactly at y still clipped the top of the
+      // text it was pointing at.
+      kids.push(this.e('line', { key: 'sw' + i, x1: px, y1: TOP + SKYH, x2: px, y2: y - 5, stroke: sh.major ? C.accent : C.n700, strokeWidth: sh.major ? 1.2 : 0.8, strokeDasharray: sh.major ? '' : '2 2' }));
+      kids.push(this.e('text', { key: 'st' + i, x: px + 3, y: y + 10 + tier * TIER, fontSize: 14, fill: sh.major ? C.a300 : C.n500 }, sh.name));
     });
-    y += 16;
+    y += 38;
     for (let t = t0; t <= t1; t += 7 * 24 * H) kids.push(this.e('text', { key: 'd' + t, x: x(t), y: y + 10, fontSize: 14, fill: C.n500, textAnchor: 'middle' }, fmt(t, 'day').slice(5)));
     y += 16;
     return this.e('svg', {
@@ -1259,6 +1434,69 @@ class Component extends DCLogic {
   }
 
   // ── day × hour matrix ────────────────────────────────────────────────────
+  /** What the matrix's cells mean.
+   *
+   * The grid carries five separate encodings — shade, an empty outline, a hatch, an underbar and a
+   * glyph — and shipped explaining none of them, which makes them decoration rather than data. The
+   * legend is built from the same constants the cells are drawn from, so the two cannot drift, and
+   * it states only the encodings the current mode actually uses: the flags are not computed in
+   * event-count mode, so claiming them there would describe marks that never appear.
+   */
+  matrixLegend() {
+    const ds = this.state.ds, C = this.C;
+    if (!ds) return null;
+    const cell = 13, mode = this.state.matrixMode, kids = [this.defs()];
+    const width = 1180;
+    let x = 0, y = 0, n = 0;
+    // markW is how wide this item's swatch actually is. It is a parameter rather than always `cell`
+    // because the shade ramp is three squares wide, and a label placed a single cell from the left
+    // edge landed on top of the second and third of them.
+    const put = (marks, text, markW) => {
+      const mw = markW || cell;
+      const w = mw + 7 + this.textWidth(text, 14) + 26;
+      if (x + w > width) { x = 0; y += cell + 13; }
+      kids.push(...marks(x, y, n));
+      kids.push(this.e('text', { key: 'lt' + n, x: x + mw + 7, y: y + cell - 1.5, fontSize: 14, fill: C.n500 }, text));
+      x += w; n += 1;
+    };
+    const swatch = (attrs) => (bx, by, i) => [this.e('rect', Object.assign(
+      { key: 'ls' + i, x: bx, y: by, width: cell, height: cell }, attrs))];
+
+    // The shade ramp, drawn as three cells at the same opacities a real cell would take.
+    put((bx, by, i) => [0.22, 0.6, 1].map((op, k) => this.e('rect', {
+      key: 'lr' + i + k, x: bx + k * (cell + 1), y: by, width: cell, height: cell,
+      fill: mode === 'events' ? C.n500 : C.a500, opacity: op
+    })), mode === 'events' ? 'events in the hour — saturates at 12'
+      : mode === 'usable' ? 'share of the hour usable' : 'share of the hour covered',
+      3 * cell + 2);
+    put(swatch({ fill: 'none', stroke: C.n900, strokeWidth: 1 }), 'nothing recorded that hour');
+    if (mode !== 'events') {
+      put(swatch({ fill: 'url(#p-hatch)' }), 'invalid or corrupt');
+      put((bx, by, i) => [
+        this.e('rect', { key: 'll' + i, x: bx, y: by, width: cell, height: cell, fill: C.a500, opacity: 0.8 }),
+        this.e('rect', { key: 'lm' + i, x: bx, y: by + cell - 2, width: cell, height: 2, fill: C.n200 })
+      ], 'data loss in the hour');
+      put(swatch({ fill: 'none', stroke: C.n600, strokeDasharray: '2 2', strokeWidth: 1 }), 'unchecked — no claim made');
+      put((bx, by, i) => [
+        this.e('rect', { key: 'ld' + i, x: bx, y: by, width: cell, height: cell, fill: C.a500, opacity: 0.8 }),
+        this.e('text', { key: 'lx' + i, x: bx + cell / 2, y: by + cell - 1.5, fontSize: 12, fill: C.a300, textAnchor: 'middle', fontWeight: 700 }, '!')
+      ], 'disputed / needs review');
+    }
+    // The caveat sits clear of the swatch rows above it, and on two lines. As one line it measured
+    // 1178 of the 1180 units available — two units from overflowing on any font that sets a shade
+    // wider — and its ascender started exactly where the wrapped row's descenders ended.
+    const rowsBottom = y + cell;
+    const noteA = rowsBottom + 20, noteB = noteA + 16;
+    if (mode !== 'events') {
+      kids.push(this.e('text', { key: 'lnA', x: 0, y: noteA, fontSize: 13.5, fill: C.n600 },
+        'An hour can hold several records; the cell shows the most serious of them, in the order above.'));
+      kids.push(this.e('text', { key: 'lnB', x: 0, y: noteB, fontSize: 13.5, fill: C.n600 },
+        'A cell is one hour whatever its length, so a 20-minute window is as loud as a 20-hour one.'));
+    }
+    const h = (mode === 'events' ? rowsBottom : noteB) + 8;
+    return this.e('svg', { width: '100%', height: h, viewBox: `0 0 ${width} ${h}`, style: { display: 'block' } }, kids);
+  }
+
   matrix() {
     const ds = this.state.ds, C = this.C;
     if (!ds) return null;
@@ -1500,7 +1738,11 @@ class Component extends DCLogic {
       rows.push({ label: 'affects', value: (r.instrumentIds || []).join(', ') });
     }
     return {
-      kicker: r.recordKind + (r.recordKind === 'coverage' ? ' record' : ''),
+      // Say whether this is following the cursor or held. A pinned record and a hovered one used to
+      // look identical, so when the cursor moved off a mark and the panel fell back to the pin, it
+      // read as the panel being stuck on the last thing rather than showing what you had pinned.
+      kicker: (!this.state.hoverId && this.state.selId ? 'pinned · click empty space to clear — ' : 'hovering — ')
+        + r.recordKind + (r.recordKind === 'coverage' ? ' record' : ''),
       title: r.label || r.id, badges, rows,
       note: r.disputeNote || '', hasNote: !!r.disputeNote
     };
@@ -1570,17 +1812,16 @@ class Component extends DCLogic {
       : pxSpan < 60000 ? `1 px ≈ ${Math.round(pxSpan / 1000)} s`
       : pxSpan < 3600e3 ? `1 px ≈ ${Math.round(pxSpan / 60000)} min` : `1 px ≈ ${(pxSpan / 3600e3).toFixed(1)} h`;
 
-    const presetDefs = ds ? [
-      { label: '45 days', go: () => this.setState({ vs: ds.campaign.start, ve: ds.campaign.end }) },
-      { label: 'One night', go: () => this.panTo(Date.parse('2024-08-12T06:00:00Z'), 14 * H) },
-      { label: 'Dense hour', go: () => this.panTo(Date.parse('2024-08-02T05:30:00Z'), 2 * H) },
-      { label: '±5 min', go: () => this.panTo(Date.parse('2024-08-02T05:45:00Z'), 10 * M) },
-      { label: 'Fragmented', go: () => this.panTo(Date.parse('2024-08-06T13:00:00Z'), 14 * H) },
-      { label: '20 min', go: () => this.panTo(Date.parse('2024-08-14T01:10:00Z'), 3 * H) },
-      { label: 'Gap', go: () => this.panTo(Date.parse('2024-09-06T15:00:00Z'), 6 * H) }
-    ] : [];
-    const presets = presetDefs.map((p) => ({
-      label: p.label, go: p.go,
+    // Jump targets come from the dataset, computed against the record when it was published. They
+    // used to be literal timestamps typed in here against a sample dataset, and once the measured
+    // record replaced that sample the button labelled "Gap" pointed into the middle of an unbroken
+    // four-day run — a control claiming we were down, sitting on the most continuous stretch of the
+    // season. Deriving them also means an entry exists only where the record holds one, so a
+    // campaign without a gap simply has no gap button rather than a button that lies.
+    const presets = ((ds && ds.jumps) || []).map((j) => ({
+      label: j.label,
+      title: j.detail ? `${j.label} — ${j.detail}` : j.label,
+      go: () => this.setState({ vs: j.start, ve: j.end }),
       style: `font-size: 16px;padding:3px 8px;color:${C.n300};`
     }));
 
@@ -1692,7 +1933,19 @@ class Component extends DCLogic {
         label: (r.disputed ? '⚠ ' : '') + (r.label || ''),
         provenance: r.provenance || '—',
         style: `cursor:pointer;${st.selId === r.id ? 'background:' + C.a900 + ';' : ''}`,
-        select: () => this.setState({ selId: r.id, view: 'timeline' })
+        // A coverage record is ours, so clicking it goes to the timeline and shows it in place. An
+        // event is somebody else's observation, and the record already carries the link back to it
+        // — opening that is more useful than pointing at our own timeline, and it keeps the
+        // attribution one click away rather than buried in the row. The stored URL is used rather
+        // than one built from a template: it is what the source gave us, and an event with no link
+        // gets the timeline instead of a guessed address.
+        select: () => {
+          if (r.recordKind === 'event' && r.referenceUrl) {
+            window.open(r.referenceUrl, '_blank', 'noopener,noreferrer');
+            return;
+          }
+          this.setState({ selId: r.id, view: 'timeline' });
+        }
       }));
     }
     const colDefs = [['id', 'ID'], ['recordKind', 'Kind'], ['instrumentId', 'Subject'], ['start', 'Start (UTC)'], ['extent', 'Extent / ±'], ['validation', 'Quality'], ['label', 'Label'], ['provenance', 'Prov.']];
@@ -1776,7 +2029,7 @@ class Component extends DCLogic {
       toggleBroken: () => this.setState({ brokenOpen: !st.brokenOpen }),
 
       // timeline
-      presets, crumbs, resolutionLabel: resolution,
+      presets, hasJumps: presets.length > 0, crumbs, resolutionLabel: resolution,
       moonLabel: ds ? `moon ${Math.round(this.moon((st.vs + st.ve) / 2).fraction * 100)}% illuminated` : '',
       rangeLabel: ds ? `${fmt(st.vs, 'sec')} → ${fmt(st.ve, 'sec')} UTC` : '',
       zoomSlider: ds ? Math.round(1000 - (Math.log(this.span / (10 * S)) / Math.log((ds.campaign.end - ds.campaign.start) / (10 * S))) * 1000) : 500,
@@ -1845,6 +2098,7 @@ class Component extends DCLogic {
       // campaign
       campaignStripEl: v === 'campaign' ? this.campaignStrip() : null,
       matrixEl: v === 'campaign' ? this.matrix() : null,
+      matrixLegendEl: v === 'campaign' ? this.matrixLegend() : null,
       recordCountLabel: ds ? `${ds.coverage.length} coverage · ${ds.events.length} events · ${ds.configs.length + ds.interference.length} context` : '',
       statCards: stats,
       matrixModes: [['coverage', 'Coverage'], ['usable', 'Usable only'], ['events', 'Event count']].map(([id, label]) => ({

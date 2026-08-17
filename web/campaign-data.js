@@ -4,7 +4,7 @@
 // records tagged provenance:'sheet_2024' are the real cases quoted in the brief.
 // Everything else is SYNTHETIC filler generated here so whole-campaign layouts
 // have plausible density to be judged against. The dashboard badges this.
-// data/2024-campaign.json now exists: it is generated from the lab record by
+// data/campaign.json now exists: it is generated from the lab record by
 //   python -m availability publish --config config.toml
 // Call loadDataset() to use it. It falls back to buildDataset() when the file is
 // absent or unreadable, so the dashboard still runs standalone — and it says which
@@ -26,7 +26,9 @@ export const CAMPAIGN = { start: D('2024-07-26T00:00:00'), end: D('2024-09-09T00
 export const DATASET_META = {
   datasetVersion: 'synthetic-v0.3',
   scanTimestamp: '2026-08-16T04:00:00Z',
-  scannerVersion: 'none — no scanner exists yet (§0.1 Q2)',
+  // Rendered in the header, so it says what it is rather than citing a question number from the
+  // design brief — a reader of the page has no way to look that up.
+  scannerVersion: 'none — this set is generated in the browser, not scanned',
   provenance: 'synthetic',
   sourceNote: 'Real cases quoted from the 2024 “Big Sheet”; all other density is invented.'
 };
@@ -46,9 +48,9 @@ export const INSTRUMENTS = [
 ];
 
 export const SHOWERS = [
-  { name: 'S. δ-Aquariids', peak: D('2024-07-30T12:00:00') },
+  { name: 'Southern δ-Aquariids', peak: D('2024-07-30T12:00:00') },
   { name: 'α-Capricornids', peak: D('2024-07-30T20:00:00'), note: 'slow bright fireballs' },
-  { name: 'Perseids max', peak: D('2024-08-12T14:00:00'), major: true, note: 'waxing gibbous Moon suppresses optical reporting' },
+  { name: 'Perseids', peak: D('2024-08-12T14:00:00'), major: true, note: 'waxing gibbous Moon suppresses optical reporting' },
   { name: 'κ-Cygnids', peak: D('2024-08-17T12:00:00') },
   { name: 'Aurigids', peak: D('2024-09-01T00:00:00') }
 ];
@@ -407,7 +409,7 @@ export function buildDataset() {
 // omits keeps the defaults in cov()/evt() above, so an absent field reads as
 // "not determined" rather than as an invented value.
 
-export const DATASET_URL = 'data/2024-campaign.json';
+export const DATASET_URL = 'data/campaign.json';
 
 export async function loadDataset(url = DATASET_URL) {
   let raw;
@@ -435,6 +437,10 @@ export async function loadDataset(url = DATASET_URL) {
     events,
     configs: [],
     interference: [],
+    // Jump targets, computed against the record when it was published rather than recomputed here,
+    // so the numbers a reader might quote are reproducible from the dataset. Empty for a dataset
+    // that predates them, and the jump bar hides itself rather than offering invented windows.
+    jumps: raw.jumps ?? [],
     broken: raw.broken ?? []
   };
 }

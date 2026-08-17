@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from .config import DEFAULT_CONFIG_NAME, Config, ConfigError
+from .core.campaign import campaign_payload
 from .core.snapshot import write_campaign, write_snapshot
 from .ingest.base import registered_adapters
 from .models import SourceStatus, iso
@@ -95,12 +96,25 @@ def _parser() -> argparse.ArgumentParser:
 
 def _publish(config: Config, *, strict: bool) -> int:
     store = Store.build(config)
+
+    # Built before the summary, not during the write. Building applies the reviewed corrections,
+    # which can find that one names a record the regenerated set no longer contains -- and a
+    # correction quietly pointing at nothing is the sort of loss this record exists to rule out. It
+    # has to reach the operator, and the --strict gate, before anything is written.
+    campaign = campaign_payload(store, config.campaign) if config.campaign.enabled else None
     _report(store)
 
     failures = [source for source in store.sources if source.status is SourceStatus.ERROR]
     if strict and failures:
         print(
             f"\nrefusing to publish: {len(failures)} source(s) failed and --strict was given",
+            file=sys.stderr,
+        )
+        return 1
+    if strict and store.corrections.warnings:
+        print(
+            f"\nrefusing to publish: {len(store.corrections.warnings)} correction(s) did not apply "
+            f"and --strict was given",
             file=sys.stderr,
         )
         return 1
@@ -111,9 +125,15 @@ def _publish(config: Config, *, strict: bool) -> int:
     for path in written:
         print(f"  {path.name}")
 
-    if config.campaign.enabled:
-        target = write_campaign(store, config)
+    if campaign is not None:
+        target = write_campaign(store, config, campaign)
+        applied = campaign.get("meta", {}).get("corrections")
         print(f"\nwrote the dashboard dataset to {target}")
+        if applied:
+            print(
+                f"  {applied['applied']} correction(s) applied, "
+                f"{applied['added']} hand-entered record(s) added"
+            )
     return 0
 
 

@@ -13,6 +13,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Iterable
 
 from .config import Config, SourceConfig
+from .core.corrections import Corrections
+from .core.corrections import load as load_corrections
 from .core.correlation import CoverageIndex, classify_events
 from .core.intervals import build_segments, clip_segments
 from .ingest.base import (
@@ -45,6 +47,12 @@ class Store:
     sources: list[Source]
     generated_at: datetime
     warnings: list[str] = field(default_factory=list)
+    corrections: Corrections = field(default_factory=Corrections)
+    """Reviewed human corrections, merged over the record when the dashboard dataset is written.
+
+    They are held rather than applied here because they speak the dashboard's field names, not the
+    record's: the record says what the sources said, and stays that way.
+    """
     segments: list[Segment] = field(default_factory=list, init=False)
     event_coverage: list[EventCoverage] = field(default_factory=list, init=False)
 
@@ -95,6 +103,11 @@ class Store:
         if config.events_within_coverage:
             _restrict_events_to_coverage(events, instruments, warnings)
 
+        corrections = Corrections()
+        if config.corrections_path is not None:
+            corrections = load_corrections(config.resolve(config.corrections_path))
+            warnings.extend(corrections.warnings)
+
         return cls(
             instruments=instruments,
             coverage=coverage,
@@ -102,6 +115,7 @@ class Store:
             sources=sources,
             generated_at=now(),
             warnings=warnings,
+            corrections=corrections,
         )
 
     # -- derived views ---------------------------------------------------------------------
