@@ -422,16 +422,41 @@ export async function loadDataset(url = DATASET_URL) {
     return buildDataset();
   }
 
-  const coverage = (raw.coverage ?? []).map((r) => cov(r)).sort((a, b) => a.start - b.start);
-  const events = (raw.events ?? []).map((r) => evt(r)).sort((a, b) => a.start - b.start);
+  const instruments = mergeInstruments(raw.instruments);
+  const knownInstruments = new Set(instruments.map((i) => i.id));
+  const broken = [...(raw.broken ?? [])];
 
-  // Showers are astronomy, not lab record, so they stay with this module. Configs,
-  // interference and broken records have no source in the record yet: empty, not invented.
+  // The same three checks the synthetic set models as broken records, applied to a generated file.
+  // Without them a malformed record is absorbed into the totals with nothing on screen to say so:
+  // a start that did not parse propagates NaN through the interval algebra and takes every overlap
+  // figure to zero, and an interval ending before it starts subtracts real hours from its
+  // instrument's usable total. Both read as a quiet change in a number a reader might quote, which
+  // is the one failure this page exists to prevent. Excluding them here is what puts them behind
+  // the "undrawable -- excluded, never dropped" control instead.
+  const drawable = (r, isCoverage) => {
+    const reject = (reason) => { broken.push({ ...r, reason }); return false; };
+    if (!Number.isFinite(r.start)) return reject('timestamp did not parse');
+    if (!isCoverage) return true;
+    if (!Number.isFinite(r.end)) return reject('timestamp did not parse');
+    if (r.end < r.start) return reject('end < start — interval cannot be drawn');
+    if (!knownInstruments.has(r.instrumentId)) {
+      return reject('instrumentId not in the instrument list — surfaced, not dropped');
+    }
+    return true;
+  };
+
+  const coverage = (raw.coverage ?? []).map((r) => cov(r))
+    .filter((r) => drawable(r, true)).sort((a, b) => a.start - b.start);
+  const events = (raw.events ?? []).map((r) => evt(r))
+    .filter((r) => drawable(r, false)).sort((a, b) => a.start - b.start);
+
+  // Showers are astronomy, not lab record, so they stay with this module. Configs and
+  // interference have no source in the record yet: empty, not invented.
   return {
     meta: { ...DATASET_META, ...(raw.meta ?? {}) },
     site: raw.site ?? SITE,
     campaign: raw.campaign ?? CAMPAIGN,
-    instruments: mergeInstruments(raw.instruments),
+    instruments,
     showers: SHOWERS,
     coverage,
     events,
@@ -441,7 +466,7 @@ export async function loadDataset(url = DATASET_URL) {
     // so the numbers a reader might quote are reproducible from the dataset. Empty for a dataset
     // that predates them, and the jump bar hides itself rather than offering invented windows.
     jumps: raw.jumps ?? [],
-    broken: raw.broken ?? []
+    broken
   };
 }
 
