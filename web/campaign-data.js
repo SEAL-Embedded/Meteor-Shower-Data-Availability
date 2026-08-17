@@ -435,6 +435,10 @@ export async function loadDataset(url = DATASET_URL) {
     events,
     configs: [],
     interference: [],
+    // Jump targets, computed against the record when it was published rather than recomputed here,
+    // so the numbers a reader might quote are reproducible from the dataset. Empty for a dataset
+    // that predates them, and the jump bar hides itself rather than offering invented windows.
+    jumps: raw.jumps ?? [],
     broken: raw.broken ?? []
   };
 }

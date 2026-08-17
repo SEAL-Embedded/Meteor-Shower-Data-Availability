@@ -1,7 +1,7 @@
 {
   "meta": {
     "datasetVersion": "measured-v1",
-    "scanTimestamp": "2026-08-16T10:43:05Z",
+    "scanTimestamp": "2026-08-17T05:03:07Z",
     "scannerVersion": "none — coverage is transcribed from the season sheet, not scanned",
     "provenance": "measured",
     "sourceNote": "NimbusTrace captures (disabled), SuperSID recordings (disabled), 2024 season operating hours (ok), American Meteor Society (ok)"
@@ -15643,6 +15643,57 @@
       "eventRefId": "5098-2024",
       "referenceUrl": "https://fireball.amsmeteors.org/members/imo_view/event/2024/5098",
       "label": "Fireball over DE, PA, TN, VA (US) (5 reports)"
+    }
+  ],
+  "jumps": [
+    {
+      "id": "campaign",
+      "label": "Whole campaign",
+      "start": 1721959320000,
+      "end": 1725844500000,
+      "detail": "45 days"
+    },
+    {
+      "id": "busiest-night",
+      "label": "Busiest night",
+      "start": 1723414140000,
+      "end": 1723464540000,
+      "detail": "57 events in 14 h"
+    },
+    {
+      "id": "dense-hour",
+      "label": "Dense hour",
+      "start": 1723432980000,
+      "end": 1723439100000,
+      "detail": "13 events within an hour"
+    },
+    {
+      "id": "closest-look",
+      "label": "Closest look",
+      "start": 1723433940000,
+      "end": 1723434540000,
+      "detail": "a single event, ±5 min"
+    },
+    {
+      "id": "shortest-run",
+      "label": "Shortest run",
+      "start": 1722059700000,
+      "end": 1722061080000,
+      "detail": "13 min of recording"
+    },
+    {
+      "id": "most-fragmented",
+      "label": "Most fragmented",
+      "start": 1722211200000,
+      "end": 1722302640000,
+      "detail": "10 separate runs on 2024-07-29"
+    },
+    {
+      "id": "largest-gap",
+      "label": "Largest gap",
+      "start": 1721959320000,
+      "end": 1722064122000,
+      "detail": "21 h with nothing recording"
     }
   ]
 }

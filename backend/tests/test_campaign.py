@@ -188,3 +188,89 @@ class TestWriting:
         target = write_campaign(Store.build(config), config)
         assert target == tmp_path / "data" / "2024-campaign.json"
         assert json.loads(target.read_text(encoding="utf-8"))["coverage"]
+
+
+# The sphere is down 02:00-09:00, but the camera covers 02:00-06:00 of it. The record's largest
+# gap is therefore three hours, not the sphere's seven.
+GAPPED_CSV = """instrument_id,start,end,quality,note
+sphere-vlf-seattle,2024-07-29T00:00:00Z,2024-07-29T02:00:00Z,good,
+sphere-vlf-seattle,2024-07-29T09:00:00Z,2024-07-29T10:00:00Z,good,
+sphere-vlf-seattle,2024-07-29T11:00:00Z,2024-07-29T12:00:00Z,good,
+sky-camera-seattle,2024-07-29T02:00:00Z,2024-07-29T06:00:00Z,good,
+"""
+
+
+@pytest.fixture
+def gapped(tmp_path) -> dict:
+    """A record with two real gaps: three hours, then one."""
+    (tmp_path / "coverage.csv").write_text(GAPPED_CSV, encoding="utf-8")
+    (tmp_path / "events.csv").write_text(EVENTS_CSV, encoding="utf-8")
+    (tmp_path / "config.toml").write_text(
+        CONFIG_TOML.format(path="data/2024-campaign.json"), encoding="utf-8"
+    )
+    config = Config.load(tmp_path / "config.toml")
+    return campaign_payload(Store.build(config), config.campaign)
+
+
+class TestJumps:
+    """The dashboard's jump bar, computed here rather than typed into the front end.
+
+    These were hardcoded timestamps written against a sample dataset. Once the measured record
+    replaced it, the button labelled *Gap* pointed into the middle of an unbroken four-day run --
+    a control asserting downtime while sitting on the most continuous stretch of the season.
+    """
+
+    def by_id(self, payload) -> dict:
+        return {jump["id"]: jump for jump in payload.get("jumps", [])}
+
+    def test_the_campaign_jump_spans_the_whole_record(self, payload):
+        jump = self.by_id(payload)["campaign"]
+        assert jump["start"] == payload["campaign"]["start"]
+        assert jump["end"] == payload["campaign"]["end"]
+
+    def test_no_gap_jump_when_the_record_has_no_gap(self, payload):
+        """The fixture's coverage is contiguous, so there is nothing for a gap jump to point at."""
+        assert "largest-gap" not in self.by_id(payload)
+
+    def test_the_gap_jump_measures_the_real_gap(self, gapped):
+        jump = self.by_id(gapped)["largest-gap"]
+        assert "3.0 h" in jump["detail"]
+        # framed, so it opens before the gap and closes after it
+        assert jump["start"] <= ms("2024-07-29T06:00:00")
+        assert jump["end"] >= ms("2024-07-29T09:00:00")
+
+    def test_a_gap_needs_every_instrument_down(self, gapped):
+        """The sphere is down 02:00-09:00, but the camera covers 02:00-06:00 of that stretch.
+
+        A gap for one instrument while another was recording is not a gap in the record.
+        """
+        jump = self.by_id(gapped)["largest-gap"]
+        assert "7" not in jump["detail"]
+        assert jump["start"] >= ms("2024-07-29T02:00:00")
+
+    def test_the_shortest_run_points_at_the_shortest_record(self, payload):
+        assert self.by_id(payload)["shortest-run"]["detail"] == "60 min of recording"
+
+    def test_the_dense_hour_counts_what_it_claims(self, payload):
+        jump = self.by_id(payload)["dense-hour"]
+        inside = [
+            event for event in payload["events"]
+            if jump["start"] <= event["start"] <= jump["end"]
+        ]
+        assert str(len(inside)) in jump["detail"]
+
+    def test_every_jump_stays_inside_the_campaign(self, payload, gapped):
+        for record in (payload, gapped):
+            window = record["campaign"]
+            for jump in record["jumps"]:
+                assert window["start"] <= jump["start"] < jump["end"] <= window["end"], jump["id"]
+
+    def test_every_jump_says_what_it_is(self, payload):
+        for jump in payload["jumps"]:
+            assert jump["label"] and jump["detail"]
+
+    def test_jumps_are_absent_rather_than_empty_without_a_record(self, config, monkeypatch):
+        """An unpopulated field must not render as a negative claim; it must not appear."""
+        store = Store.build(config)
+        monkeypatch.setattr(type(store), "range", property(lambda self: None))
+        assert "jumps" not in campaign_payload(store, config.campaign)

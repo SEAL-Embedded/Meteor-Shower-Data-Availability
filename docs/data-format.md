@@ -277,6 +277,46 @@ Two rules hold in that translation, and both exist to stop a value being invente
 for — a year of catalogue events must not stretch a 45-night observing run across the whole calendar.
 Events outside it are still included.
 
+### `jumps`
+
+Notable windows in the record, for the dashboard's jump bar. Optional.
+
+```json
+"jumps": [
+  { "id": "campaign",     "label": "Whole campaign",  "start": 1721959320000, "end": 1725844500000, "detail": "45 days" },
+  { "id": "largest-gap",  "label": "Largest gap",     "start": 1721959320000, "end": 1722063000000, "detail": "21 h with nothing recording" }
+]
+```
+
+`id` is stable and machine-readable; `label` is what the button says; `detail` states the measured
+fact behind it, which the dashboard shows on hover. `start` and `end` are framed a little wider than
+the thing they point at, so it has context around it, and are always inside `campaign`.
+
+These are **computed when the record is published, not by the client.** Two reasons, and the second
+is why it is worth a section of its own:
+
+- A figure quoted from this page — "the longest gap in the 2024 season was 21 hours" — should be
+  reproducible from the dataset later, not recomputed differently by whichever client read it.
+- They were previously literal timestamps written into the front end against a sample dataset. Once
+  the measured record replaced that sample, the button labelled *Gap* pointed into the middle of an
+  unbroken four-day run: a control asserting we were down, sitting on the most continuous stretch of
+  the season. That is exactly the confusion the `covered` / `not_covered` / `unknown` distinction
+  exists to prevent, and it is not a mistake a client-side default can be trusted not to repeat.
+
+**An entry appears only where the record holds one.** A campaign with no gap publishes no
+`largest-gap`; a record with no events publishes none of the event-density entries. This is the same
+rule as everywhere else in the export — an absent field means *not determined*, never a claim — and
+here it has teeth: the dashboard builds its bar from whatever is present, so it cannot offer a button
+promising a window the record does not contain. A dataset carrying no `jumps` at all gets no bar.
+
+The ids currently emitted are `campaign`, `busiest-night`, `dense-hour`, `closest-look`,
+`shortest-run`, `most-fragmented` and `largest-gap`. Clients must not depend on that list being
+complete or ordered; read what is there.
+
+This is additive, and only to the dashboard dataset — the contract snapshots above are unchanged, so
+`schema_version` stays at 1.0. A client that does not recognise `jumps` ignores it and is otherwise
+unaffected.
+
 ## Compatibility
 
 `schema_version` follows major.minor. A minor bump only adds fields; clients must ignore fields they

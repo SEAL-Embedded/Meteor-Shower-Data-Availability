@@ -109,12 +109,16 @@
       <div class="scroll" style="flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow-y: auto;">
 
         <div style="display: flex; align-items: center; gap: var(--space-2); padding: 5px var(--space-6); border-bottom: 1px solid var(--color-divider); flex: none;">
-          <span class="mono" style="font-size: 14px; letter-spacing: 0.08em; color: var(--color-neutral-500); flex: none;">JUMP</span>
-          <div style="display: flex; gap: 3px; flex-wrap: wrap;">
-            <sc-for list="{{ presets }}" as="p" hint-placeholder-count="5">
-              <button type="button" class="btn btn-secondary" style="{{ p.style }}" onClick="{{ p.go }}">{{ p.label }}</button>
-            </sc-for>
-          </div>
+          <sc-if value="{{ hasJumps }}" hint-placeholder-val="{{ true }}">
+            <div style="display: flex; align-items: center; gap: var(--space-2); min-width: 0;">
+              <span class="mono" style="font-size: 14px; letter-spacing: 0.08em; color: var(--color-neutral-500); flex: none;">JUMP</span>
+              <div style="display: flex; gap: 3px; flex-wrap: wrap;">
+                <sc-for list="{{ presets }}" as="p" hint-placeholder-count="5">
+                  <button type="button" class="btn btn-secondary" style="{{ p.style }}" title="{{ p.title }}" onClick="{{ p.go }}">{{ p.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
           <div style="display: flex; align-items: center; gap: 5px; margin-left: auto; flex: none;">
             <button type="button" class="btn btn-secondary" style="font-size: 16px; padding: 2px 7px;" onClick="{{ zoomOut }}">−</button>
             <input type="range" min="0" max="1000" value="{{ zoomSlider }}" onInput="{{ onZoomSlider }}" style="width: 104px; accent-color: var(--color-accent);" aria-label="Zoom span, six weeks to ten seconds">
@@ -1650,17 +1654,16 @@ class Component extends DCLogic {
       : pxSpan < 60000 ? `1 px ≈ ${Math.round(pxSpan / 1000)} s`
       : pxSpan < 3600e3 ? `1 px ≈ ${Math.round(pxSpan / 60000)} min` : `1 px ≈ ${(pxSpan / 3600e3).toFixed(1)} h`;
 
-    const presetDefs = ds ? [
-      { label: '45 days', go: () => this.setState({ vs: ds.campaign.start, ve: ds.campaign.end }) },
-      { label: 'One night', go: () => this.panTo(Date.parse('2024-08-12T06:00:00Z'), 14 * H) },
-      { label: 'Dense hour', go: () => this.panTo(Date.parse('2024-08-02T05:30:00Z'), 2 * H) },
-      { label: '±5 min', go: () => this.panTo(Date.parse('2024-08-02T05:45:00Z'), 10 * M) },
-      { label: 'Fragmented', go: () => this.panTo(Date.parse('2024-08-06T13:00:00Z'), 14 * H) },
-      { label: '20 min', go: () => this.panTo(Date.parse('2024-08-14T01:10:00Z'), 3 * H) },
-      { label: 'Gap', go: () => this.panTo(Date.parse('2024-09-06T15:00:00Z'), 6 * H) }
-    ] : [];
-    const presets = presetDefs.map((p) => ({
-      label: p.label, go: p.go,
+    // Jump targets come from the dataset, computed against the record when it was published. They
+    // used to be literal timestamps typed in here against a sample dataset, and once the measured
+    // record replaced that sample the button labelled "Gap" pointed into the middle of an unbroken
+    // four-day run — a control claiming we were down, sitting on the most continuous stretch of the
+    // season. Deriving them also means an entry exists only where the record holds one, so a
+    // campaign without a gap simply has no gap button rather than a button that lies.
+    const presets = ((ds && ds.jumps) || []).map((j) => ({
+      label: j.label,
+      title: j.detail ? `${j.label} — ${j.detail}` : j.label,
+      go: () => this.setState({ vs: j.start, ve: j.end }),
       style: `font-size: 16px;padding:3px 8px;color:${C.n300};`
     }));
 
@@ -1856,7 +1859,7 @@ class Component extends DCLogic {
       toggleBroken: () => this.setState({ brokenOpen: !st.brokenOpen }),
 
       // timeline
-      presets, crumbs, resolutionLabel: resolution,
+      presets, hasJumps: presets.length > 0, crumbs, resolutionLabel: resolution,
       moonLabel: ds ? `moon ${Math.round(this.moon((st.vs + st.ve) / 2).fraction * 100)}% illuminated` : '',
       rangeLabel: ds ? `${fmt(st.vs, 'sec')} → ${fmt(st.ve, 'sec')} UTC` : '',
       zoomSlider: ds ? Math.round(1000 - (Math.log(this.span / (10 * S)) / Math.log((ds.campaign.end - ds.campaign.start) / (10 * S))) * 1000) : 500,
