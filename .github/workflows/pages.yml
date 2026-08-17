@@ -3,6 +3,13 @@ name: Deploy site
 # The static front end and the JSON snapshots under web/ are the whole deployment. Snapshots are
 # generated on the machine that holds the instrument data and committed here; this workflow only
 # publishes what has already been committed.
+#
+# This is the ONLY workflow that may deploy Pages. Enabling Pages through the repository settings
+# UI offers to commit a starter workflow (static.yml) that uploads `path: '.'` -- the whole
+# repository. That one was added and then removed, because two workflows in the same `pages`
+# concurrency group race, and when the starter won it published the repository root, which has no
+# index.html: the site 404'd at its own URL while the dashboard sat at /web/. If Pages is ever
+# reconfigured, decline the starter workflow and keep this file as the single deploy path.
 
 on:
   push:
