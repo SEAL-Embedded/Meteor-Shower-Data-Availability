@@ -989,7 +989,11 @@ class Component extends DCLogic {
     ticks.forEach((tk, i) => {
       const tx = x(tk.t);
       kids.push(this.e('line', { key: 'g' + i, x1: tx, y1: AX - 6, x2: tx, y2: 1e4, stroke: tk.major ? C.n800 : C.n900, strokeWidth: 1 }));
-      kids.push(this.e('text', { key: 't' + i, x: tx, y: 47, fontSize: 14.5, fill: C.n500, textAnchor: 'middle' }, tk.label));
+      // Centred on its tick, the first and last labels overhang the plot by half their width.
+      // Nudge those two so the text box stays inside; the rest are unmoved.
+      const halfW = tk.label.length * 14.5 * 0.28;
+      const lx = Math.max(L + halfW, Math.min(L + W - halfW, tx));
+      kids.push(this.e('text', { key: 't' + i, x: lx, y: 47, fontSize: 14.5, fill: C.n500, textAnchor: 'middle' }, tk.label));
     });
     kids.push(this.e('line', { key: 'axl', x1: 0, y1: AX - 1, x2: L + W, y2: AX - 1, stroke: C.n800, strokeWidth: 1 }));
     kids.push(this.e('line', { key: 'gut', x1: L - 1, y1: 0, x2: L - 1, y2: 1e4, stroke: C.n800, strokeWidth: 1 }));
@@ -1085,7 +1089,12 @@ class Component extends DCLogic {
             key: 'ls' + ri + ci, x: x1, y: by + bh - lh - 0.4, width: w, height: lh,
             fill: C.n300, opacity: c.lossSeverity === 'major' ? 0.95 : 0.55
           }));
-          if (c.lossSeverity === 'minor') kids.push(this.e('line', {
+          // The dash that marks minor loss is a texture, and a texture needs room to read. It is
+          // stroked in the background colour, and its first dash is 2 units wide — so on a strip at
+          // the 1.6-unit minimum it painted out the middle of the mark and left two slivers, which
+          // is what a minor loss looked like at campaign zoom. Below the width where the pattern
+          // means anything, fall back to the opacity difference, which already encodes severity.
+          if (c.lossSeverity === 'minor' && w >= 6) kids.push(this.e('line', {
             key: 'ls2' + ri + ci, x1, y1: by + bh - lh / 2 - 0.4, x2: x1 + w, y2: by + bh - lh / 2 - 0.4,
             stroke: C.bg, strokeWidth: Math.max(0.8, lh * 0.5), strokeDasharray: '2 3'
           }));
@@ -1233,7 +1242,9 @@ class Component extends DCLogic {
           const cx2 = clampX(x(ev.start + cw));
           if (ev.eventEnd) kids.push(this.e('line', { key: 'em' + si + ei, x1: ax, y1: cy - capH - 2, x2: clampX(x(ev.eventEnd)), y2: cy - capH - 2, stroke: C.n700, strokeWidth: 1, strokeDasharray: '2 4' }));
           kids.push(this.e('rect', { key: 'ec' + si + ei, x: ax, y: cy - capH * 0.8, width: Math.max(2.5, cx2 - ax), height: capH * 1.6, fill: col, opacity: 0.9 }));
-          if (cx2 - ax > 40) kids.push(this.e('text', { key: 'ect' + si + ei, x: cx2 + 4, y: cy + 4.5, fontSize: 14, fill: C.n500 }, 'ionospheric window ≈10 min'));
+          // ~185 units of text. Drawn from a clamped edge it ran off the right of the plot, so it
+          // is only drawn where it actually fits.
+          if (cx2 - ax > 40 && cx2 + 4 + 185 < L + W) kids.push(this.e('text', { key: 'ect' + si + ei, x: cx2 + 4, y: cy + 4.5, fontSize: 14, fill: C.n500 }, 'ionospheric window ≈10 min'));
         } else {
           const narrow = wpx < 4;
           const w = narrow ? 4 : wpx;
@@ -1241,16 +1252,29 @@ class Component extends DCLogic {
           kids.push(this.e('line', { key: 'ei' + si + ei, x1: ax2, y1: cy, x2: ax2 + w, y2: cy, stroke: col, strokeWidth: sel ? 2.4 : 1.5 }));
           kids.push(this.e('line', { key: 'e1' + si + ei, x1: ax2, y1: cy - capH, x2: ax2, y2: cy + capH, stroke: col, strokeWidth: sel ? 2 : 1.2 }));
           kids.push(this.e('line', { key: 'e2' + si + ei, x1: ax2 + w, y1: cy - capH, x2: ax2 + w, y2: cy + capH, stroke: col, strokeWidth: sel ? 2 : 1.2 }));
-          if (!narrow && wpx > 9) kids.push(this.e('rect', { key: 'e3' + si + ei, x: x(ev.start) - 1.1, y: cy - capH * 0.62, width: 2.2, height: capH * 1.24, fill: col }));
+          // The interval ends are clamped, but the best-estimate tick and the disputed flag were
+          // positioned from the raw time. An event whose interval overlaps the viewport while its
+          // best estimate sits outside it drew these past the edge of the plot.
+          if (!narrow && wpx > 9) kids.push(this.e('rect', { key: 'e3' + si + ei, x: clampX(x(ev.start)) - 1.1, y: cy - capH * 0.62, width: 2.2, height: capH * 1.24, fill: col }));
           if (narrow) kids.push(this.e('text', { key: 'e4' + si + ei, x: ax2 + w / 2, y: cy - capH - 2, fontSize: 12, fill: C.n600, textAnchor: 'middle' }, '±'));
-          if (ev.disputed) kids.push(this.e('text', { key: 'e5' + si + ei, x: ax2 + w + 4, y: cy + 4.5, fontSize: 14.5, fill: C.a300, fontWeight: 600 }, '!'));
+          if (ev.disputed) kids.push(this.e('text', { key: 'e5' + si + ei, x: Math.min(ax2 + w + 4, L + W - 6), y: cy + 4.5, fontSize: 14.5, fill: C.a300, fontWeight: 600 }, '!'));
         }
         hits.push({ type: 'rec', rec: ev, x1: Math.min(ax, bx) - 3, x2: Math.max(ax, bx) + 3, y1: cy - 7, y2: cy + 7 });
       });
       if (span < 3 * H && evs.length <= 260) {
         evs.filter((ev) => ev.start > t0 && ev.start < t1).slice(0, 14).forEach((ev, ei) => {
           if (!ev.label) return;
-          kids.push(this.e('text', { key: 'el' + si + ei, x: x(ev.start) + 7, y: cy - capH - 3, fontSize: 14, fill: C.n500 }, ev.label));
+          // Anchored on the raw time, so a label could be drawn left of the plot and run across the
+          // lane names in the gutter. Labels belong to events inside the viewport; anchor them
+          // there, and where one would still overrun the right edge — these run to 30-odd
+          // characters — hang it off the left of its mark instead of letting it escape.
+          const lx = x(ev.start) + 7;
+          if (lx < L || lx > L + W) return;
+          const over = lx + ev.label.length * 14 * 0.55 > L + W;
+          kids.push(this.e('text', {
+            key: 'el' + si + ei, x: over ? x(ev.start) - 7 : lx, y: cy - capH - 3,
+            fontSize: 14, fill: C.n500, textAnchor: over ? 'end' : 'start'
+          }, ev.label));
         });
       }
     });
