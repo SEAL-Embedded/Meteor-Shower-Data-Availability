@@ -157,13 +157,16 @@
         </div>
 
         <div style="display: flex; align-items: center; gap: var(--space-4); padding: var(--space-2) var(--space-6) var(--space-3); border-top: 1px solid var(--color-divider); flex-wrap: wrap; flex: none;">
-          <span class="mono" style="font-size: 14px; letter-spacing: 0.08em; color: var(--color-neutral-500); flex: none;">OVERLAP</span>
+          <!-- This bar states what the Overlap 2+ rail above actually counted. It read as a row of
+               loose chips with no verb, so it looked like status badges rather than the filter it
+               is; the sentence says who is speaking and which chips are settings you can change. -->
+          <span style="font-size: 15px; color: var(--color-neutral-400); flex: none;">The <b style="color: var(--color-accent);">Overlap&nbsp;2+</b> rail counts coverage that is</span>
           <div style="display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center;">
-            <span class="tag tag-neutral" style="font-size: 14px;">files intact</span>
-            <span class="tag tag-neutral" style="font-size: 14px;">signal valid</span>
-            <span class="tag" style="{{ clockChipStyle }}" onClick="{{ toggleUndisciplined }}">{{ clockChipLabel }}</span>
-            <span class="tag tag-neutral" style="font-size: 14px;">≥ {{ minOverlapLabel }}</span>
-            <button type="button" class="btn btn-ghost" style="font-size: 16px; padding: 2px 6px;" onClick="{{ bumpMinOverlap }}">change threshold</button>
+            <span class="tag tag-neutral" style="font-size: 14px;" title="Only records whose files are present and readable count toward overlap.">files intact</span>
+            <span class="tag tag-neutral" style="font-size: 14px;" title="Only records an operator or scanner judged usable count toward overlap.">signal valid</span>
+            <span class="tag" style="{{ clockChipStyle }}" onClick="{{ toggleUndisciplined }}" title="Click to include or exclude records whose clock discipline was never recorded. Unverified is not the same as known-bad.">{{ clockChipLabel }}</span>
+            <span class="tag tag-neutral" style="font-size: 14px;" title="Overlaps shorter than this are ignored: a few seconds of intersection is not an analysable window.">and lasts ≥ {{ minOverlapLabel }}</span>
+            <button type="button" class="btn btn-ghost" style="font-size: 16px; padding: 2px 6px;" onClick="{{ bumpMinOverlap }}" title="Cycle the minimum overlap duration">change threshold</button>
           </div>
         </div>
       </div>
@@ -1002,16 +1005,18 @@ class Component extends DCLogic {
     kids.push(this.e('line', { key: 'axl', x1: 0, y1: AX - 1, x2: L + W, y2: AX - 1, stroke: C.n800, strokeWidth: 1 }));
     kids.push(this.e('line', { key: 'gut', x1: L - 1, y1: 0, x2: L - 1, y2: 1e4, stroke: C.n800, strokeWidth: 1 }));
 
-    // ── sensitivity strip
+    // ── sensitivity strip. Kept clear of the axis rule above it, which it used to sit one unit
+    // under, so the two read as a single band.
+    y += 8;
     kids.push(...this.skyBands(L, W, t0, t1, y, SKY, 2));
-    kids.push(this.e('text', { key: 'skl', x: 0, y: y + 10, fontSize: 14.5, fill: C.n400 }, 'Sky sensitivity'));
+    kids.push(this.e('text', { key: 'skl', x: 0, y: y + SKY / 2 + 5, fontSize: 14.5, fill: C.n400 }, 'Sky sensitivity'));
     y += SKY + 8;
 
     // ── coverage lanes: instruments and events split the free height evenly,
     // so the chart fills its container instead of ending halfway down.
     const rows = this.laneRows();
     const OVH = 30, INTH = 20;
-    const chrome = AX + SKY + 8 + 8 + OVH + 6 + INTH + 5 + 12;
+    const chrome = AX + 8 + SKY + 8 + 8 + OVH + 6 + INTH + 5 + 12;
     const free = Math.max(200, (this.state.plotH || 460) - chrome);
     const laneBudget = free * 0.52, evBudget = free * 0.48;
     const totalW = rows.reduce((a, r) => a + r.w, 0) || 1;
@@ -1019,6 +1024,11 @@ class Component extends DCLogic {
     const evh = Math.max(24, Math.min(110, evBudget / 4));
     const capH = Math.max(5, Math.min(13, evh * 0.28));
     const configs = ds.configs;
+    // Instruments the record holds nothing for anywhere — in the 2024 season that is NimbusTrace
+    // and SuperSID, neither of which existed yet. Their lanes never respond to a hover and never
+    // draw a mark, which reads as a broken row rather than as an instrument that was not there.
+    // Saying so is also the honest reading of the data: no record is not a record of downtime.
+    const everRecorded = new Set(this.records.coverage.map((c) => c.instrumentId));
     rows.forEach((row, ri) => {
       const ry = y, rh = row.h;
       kids.push(this.e('rect', { key: 'lb' + ri, x: 0, y: ry, width: L + W, height: rh, fill: ri % 2 ? C.text : 'none', opacity: ri % 2 ? 0.035 : 1 }));
@@ -1035,6 +1045,10 @@ class Component extends DCLogic {
       kids.push(this.e('text', { key: 'ln' + ri, x: 0, y: ry + rh / 2 + 5.6, fontSize: nameSize, fill: row.kind === 'inst' ? C.n300 : C.n400, style: { cursor: 'pointer' } }, name));
       if (row.kind === 'chan') {
         kids.push(this.e('text', { key: 'lc' + ri, x: L - 8, y: ry + rh / 2 + 5.6, fontSize: 14.5, fill: C.n500, textAnchor: 'end' }, row.ch.label));
+      }
+      if (row.first && !everRecorded.has(row.inst.id)) {
+        kids.push(this.e('text', { key: 'lne' + ri, x: L + 10, y: ry + rh / 2 + 5, fontSize: 14, fill: C.n600 },
+          'no record for this instrument — absence here is not downtime'));
       }
       hits.push({ type: 'lane', x1: 0, x2: L - 2, y1: ry, y2: ry + rh, instId: row.inst.id });
 
@@ -1223,6 +1237,11 @@ class Component extends DCLogic {
           `${evs.length} reports in view — binned; zoom in for uncertainty intervals`));
         return;
       }
+      // Where each event's mark actually got drawn, so a label can be anchored to the mark rather
+      // than recomputed from the timestamp. Labels used to hang off the best-estimate tick, which
+      // sits inside the uncertainty interval — so the text started somewhere in the middle of its
+      // own mark, and where the estimate was off-centre it started in a different place each time.
+      const spans = [];
       evs.forEach((ev, ei) => {
         let lo, hi, treat = 'interval';
         if (ev.uncertaintyBasis === 'unknown' || ev.uncertaintySec == null) {
@@ -1264,6 +1283,7 @@ class Component extends DCLogic {
           if (ev.disputed) kids.push(this.e('text', { key: 'e5' + si + ei, x: Math.min(ax2 + w + 4, L + W - 6), y: cy + 4.5, fontSize: 14.5, fill: C.a300, fontWeight: 600 }, '!'));
         }
         hits.push({ type: 'rec', rec: ev, x1: Math.min(ax, bx) - 3, x2: Math.max(ax, bx) + 3, y1: cy - 7, y2: cy + 7 });
+        spans.push({ ev, left: Math.min(ax, bx), right: Math.max(ax, bx) });
       });
       // Event labels, placed left to right into slots as wide as the longest label in view. One is
       // drawn only where a whole free slot remains since the last one placed; the rest are left
@@ -1276,24 +1296,25 @@ class Component extends DCLogic {
       // events happen to fall in it rather than on how far you have zoomed — the row would thin out
       // and refill as you pan, which reads as flicker rather than as information.
       //
-      // 0.52 em per character is this font's mean advance, measured across the real labels, which
-      // run 0.436 to 0.474; the margin is deliberate. Over-estimating costs a label, under-
-      // estimating overlaps them. Widths here are viewBox units, the same space the marks are laid
-      // out in, so this holds at any window size without being recomputed against the screen.
-      const LABEL_FONT = 14, LABEL_EM = 0.52, LABEL_GAP = 12;
+      // Width comes from textWidth(), the same estimate the lane names are clipped with, rather
+      // than a second constant kept in step by hand. It assumes 0.55 em per character against a
+      // measured 0.436-0.474 for these labels, so it errs wide: over-estimating costs a label,
+      // under-estimating puts them back on top of each other. Widths are viewBox units, the space
+      // the marks are laid out in, so this holds at any window size.
+      const LABEL_FONT = 14, LABEL_GAP = 12;
       if (span < 3 * H && evs.length <= 260) {
-        const inView = evs.filter((ev) => ev.label && ev.start > t0 && ev.start < t1);
-        const slot = inView.reduce((w, ev) => Math.max(w, ev.label.length), 0) * LABEL_FONT * LABEL_EM;
+        // Anchored to the mark's own left edge, so the text starts where the event's interval
+        // starts and the two read as one object. Where a slot will not fit to the right — these
+        // labels run to 58 characters — it hangs off the right edge instead, still flush with the
+        // mark rather than floating away from it.
+        const inView = spans.filter((s) => s.ev.label);
+        const longest = inView.reduce((t, s) => (s.ev.label.length > t.length ? s.ev.label : t), '');
+        const slot = this.textWidth(longest, LABEL_FONT);
         let filled = -Infinity;
-        inView.forEach((ev, ei) => {
-          // Anchored on the raw time, so a label could be drawn left of the plot and run across the
-          // lane names in the gutter. Labels belong to events inside the viewport; anchor them
-          // there, and where a slot would not fit to the right — these run to 58 characters — hang
-          // it off the left of its mark instead of letting it escape.
-          const at = x(ev.start), lx = at + 7;
-          if (lx < L || lx > L + W) return;
-          const flip = lx + slot > L + W;
-          const from = flip ? at - 7 - slot : lx;
+        inView.forEach((s, ei) => {
+          const ev = s.ev;
+          const flip = s.left + slot > L + W;
+          const from = flip ? s.right - slot : s.left;
           // The slot has to start inside the plot as well as clear of the last label placed. A
           // flipped one runs leftward, so without the first of these it walks off the left edge and
           // across the lane names -- and on a narrow window, where a slot is wider than the plot,
@@ -1301,7 +1322,7 @@ class Component extends DCLogic {
           // there to hover, and a row of labels nothing can be read from is worse than no row.
           if (from < Math.max(L, filled + LABEL_GAP)) return;
           kids.push(this.e('text', {
-            key: 'el' + si + ei, x: flip ? at - 7 : lx, y: cy - capH - 3,
+            key: 'el' + si + ei, x: flip ? s.right : s.left, y: cy - capH - 3,
             fontSize: LABEL_FONT, fill: C.n500, textAnchor: flip ? 'end' : 'start'
           }, ev.label));
           filled = from + slot;
@@ -1313,8 +1334,12 @@ class Component extends DCLogic {
     // Crosshair: always present, moved by direct DOM writes on mousemove so the
     // whole plot is not re-rendered per pixel.
     kids.push(this.e('line', { key: 'ch', id: 'xh-l', x1: -99, y1: 22, x2: -99, y2: y, stroke: C.accent, strokeWidth: 0.8, opacity: 0.55 }));
-    kids.push(this.e('rect', { key: 'chb', id: 'xh-b', x: -199, y: 22, width: 160, height: 20, fill: C.bg, opacity: 0.9 }));
-    kids.push(this.e('text', { key: 'cht', id: 'xh-t', x: -99, y: 37, fontSize: 14.5, fill: C.a300, textAnchor: 'middle' }, ''));
+    // The readout sits on the axis baseline and masks the tick labels behind it, so the exact time
+    // replaces the tick it is standing on rather than being written across it. It used to sit at
+    // baseline 37 with a mask covering y 22-42, while the tick glyphs run 32.6 to 50.4: the two
+    // texts overlapped, and the mask was too short to hide what it was overlapping.
+    kids.push(this.e('rect', { key: 'chb', id: 'xh-b', x: -199, y: 31, width: 160, height: 21, fill: C.bg, opacity: 0.95 }));
+    kids.push(this.e('text', { key: 'cht', id: 'xh-t', x: -99, y: 47, fontSize: 14.5, fill: C.a300, textAnchor: 'middle' }, ''));
 
     this._hits = hits;
     this._plotGeom = { L, W, t0, t1, vbw: L + W + 12 };
@@ -1331,9 +1356,13 @@ class Component extends DCLogic {
     const L = 152, W = 1080, t0 = ds.campaign.start, t1 = ds.campaign.end;
     const x = (t) => L + ((t - t0) / (t1 - t0)) * W;
     const kids = [this.defs()];
-    let y = 16;
-    kids.push(...this.skyBands(L, W, t0, t1, 0, 8, 1));
-    kids.push(this.e('text', { key: 'sl', x: 0, y: 8, fontSize: 14, fill: C.n600 }, 'day/night'));
+    // The day/night strip sat at y 0, hard against the top of the viewBox, so its label — baseline
+    // 8, ascending about 13 — had its top half clipped away by the edge. The strip needs a margin
+    // above it big enough for the label's ascender.
+    const TOP = 12, SKYH = 8;
+    let y = TOP + SKYH + 8;
+    kids.push(...this.skyBands(L, W, t0, t1, TOP, SKYH, 1));
+    kids.push(this.e('text', { key: 'sl', x: 0, y: TOP + SKYH / 2 + 5, fontSize: 14, fill: C.n600 }, 'day/night'));
     ds.instruments.forEach((inst, i) => {
       const ry = y + i * 29;
       kids.push(this.e('text', { key: 'l' + i, x: 0, y: ry + 17, fontSize: 15.5, fill: C.n300 }, inst.short));
@@ -1352,7 +1381,7 @@ class Component extends DCLogic {
     })));
     y += 26;
     ds.showers.forEach((sh, i) => {
-      kids.push(this.e('line', { key: 'sw' + i, x1: x(sh.peak), y1: 8, x2: x(sh.peak), y2: y, stroke: sh.major ? C.accent : C.n700, strokeWidth: sh.major ? 1.2 : 0.8, strokeDasharray: sh.major ? '' : '2 2' }));
+      kids.push(this.e('line', { key: 'sw' + i, x1: x(sh.peak), y1: TOP + SKYH, x2: x(sh.peak), y2: y, stroke: sh.major ? C.accent : C.n700, strokeWidth: sh.major ? 1.2 : 0.8, strokeDasharray: sh.major ? '' : '2 2' }));
       kids.push(this.e('text', { key: 'st' + i, x: x(sh.peak) + 3, y: y + 10, fontSize: 14, fill: sh.major ? C.a300 : C.n500 }, sh.name));
     });
     y += 16;
@@ -1801,7 +1830,19 @@ class Component extends DCLogic {
         label: (r.disputed ? '⚠ ' : '') + (r.label || ''),
         provenance: r.provenance || '—',
         style: `cursor:pointer;${st.selId === r.id ? 'background:' + C.a900 + ';' : ''}`,
-        select: () => this.setState({ selId: r.id, view: 'timeline' })
+        // A coverage record is ours, so clicking it goes to the timeline and shows it in place. An
+        // event is somebody else's observation, and the record already carries the link back to it
+        // — opening that is more useful than pointing at our own timeline, and it keeps the
+        // attribution one click away rather than buried in the row. The stored URL is used rather
+        // than one built from a template: it is what the source gave us, and an event with no link
+        // gets the timeline instead of a guessed address.
+        select: () => {
+          if (r.recordKind === 'event' && r.referenceUrl) {
+            window.open(r.referenceUrl, '_blank', 'noopener,noreferrer');
+            return;
+          }
+          this.setState({ selId: r.id, view: 'timeline' });
+        }
       }));
     }
     const colDefs = [['id', 'ID'], ['recordKind', 'Kind'], ['instrumentId', 'Subject'], ['start', 'Start (UTC)'], ['extent', 'Extent / ±'], ['validation', 'Quality'], ['label', 'Label'], ['provenance', 'Prov.']];
