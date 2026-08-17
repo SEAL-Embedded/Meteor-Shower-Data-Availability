@@ -18,7 +18,7 @@ directory = "web/data"
 [campaign]
 enabled = false
 # Beside the dashboard's own folder, because the dashboard fetches it relative to itself.
-path = "web/data/2024-campaign.json"
+path = "web/data/campaign.json"
 site_altitude_m = 45
 
 [campaign.instrument_ids]

@@ -248,7 +248,7 @@ Live API errors are JSON, with the HTTP status carrying the meaning:
 
 The dashboard in `Data Availability Dashboard.dc.html` reads a second format of its own design —
 epoch-millisecond timestamps, its own field names and controlled vocabularies. `publish` writes it to
-`data/2024-campaign.json` when `[campaign] enabled = true`. It is a translation of the same record,
+`data/campaign.json` when `[campaign] enabled = true`. It is a translation of the same record,
 not a second source of truth.
 
 The mapping is configured, not hardcoded, so the front end can rename things without the record

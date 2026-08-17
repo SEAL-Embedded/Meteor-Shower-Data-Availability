@@ -3,7 +3,7 @@
 The dashboard in ``Data Availability Dashboard.dc.html`` reads a dataset of its own design, with
 epoch-millisecond timestamps and its own controlled vocabularies. Rather than bend either side, this
 translates ours into theirs at publish time, so the dashboard's own comment -- *replace
-buildDataset() with a fetch of data/2024-campaign.json* -- becomes true.
+buildDataset() with a fetch of data/campaign.json* -- becomes true.
 
 Two rules govern the translation:
 

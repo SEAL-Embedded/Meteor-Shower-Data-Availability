@@ -78,7 +78,7 @@ def config(tmp_path) -> Config:
     (tmp_path / "coverage.csv").write_text(COVERAGE_CSV, encoding="utf-8")
     (tmp_path / "events.csv").write_text(EVENTS_CSV, encoding="utf-8")
     (tmp_path / "config.toml").write_text(
-        CONFIG_TOML.format(path="data/2024-campaign.json"), encoding="utf-8"
+        CONFIG_TOML.format(path="data/campaign.json"), encoding="utf-8"
     )
     return Config.load(tmp_path / "config.toml")
 
@@ -186,7 +186,7 @@ class TestEvents:
 class TestWriting:
     def test_it_writes_where_the_dashboard_looks(self, config, tmp_path):
         target = write_campaign(Store.build(config), config)
-        assert target == tmp_path / "data" / "2024-campaign.json"
+        assert target == tmp_path / "data" / "campaign.json"
         assert json.loads(target.read_text(encoding="utf-8"))["coverage"]
 
 
@@ -206,7 +206,7 @@ def gapped(tmp_path) -> dict:
     (tmp_path / "coverage.csv").write_text(GAPPED_CSV, encoding="utf-8")
     (tmp_path / "events.csv").write_text(EVENTS_CSV, encoding="utf-8")
     (tmp_path / "config.toml").write_text(
-        CONFIG_TOML.format(path="data/2024-campaign.json"), encoding="utf-8"
+        CONFIG_TOML.format(path="data/campaign.json"), encoding="utf-8"
     )
     config = Config.load(tmp_path / "config.toml")
     return campaign_payload(Store.build(config), config.campaign)

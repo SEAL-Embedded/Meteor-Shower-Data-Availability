@@ -1,3 +1,27 @@
+> ## Status — superseded, kept for its domain notes
+>
+> **This brief commissioned the dashboard that now exists. Do not read it as a description of the
+> repository.** It was written in August 2026, before the backend landed, and several of its
+> statements were overtaken within days of being published:
+>
+> | The brief says | Actually |
+> | --- | --- |
+> | §0.1 Q2 "no scanner is in the repo today" | `backend/availability/ingest/` reads recording directories, SuperSID WAVs and CSV timeseries. It does **not** detect validation, loss, clock discipline or sensitivity — those remain human calls. |
+> | §0.1 Q4 / §9 "blocking request: please commit `data/2024-campaign.json`" | Committed as `web/data/campaign.json` — 62 coverage intervals, 821 events, all measured. |
+> | §4 diagnoses "the current website" (a Firebase page) | Deleted. The dashboard replacing it is `web/Data Availability Dashboard.dc.html`. |
+> | §8 "proposed data model — not yet agreed" | Agreed and implemented; the contract is [`data-format.md`](data-format.md). |
+> | §9 `3647f … −23` offered as the dispute test case | The scraped AMS record for that id reads 06:11 UT, −11, 7 reports. The record does hold five events at −26 or brighter, so the test case stands — that one does not. |
+> | §12 "who converts the sheet's prose cells into JSON?" | Done; see `records/` and `tools/`. |
+>
+> **Still open**, and the reason this file is kept rather than deleted: §0.1 Q1 (who the primary
+> user is), §0.1 Q3 (where manage-mode corrections go), and §2's rule that overlap must exclude
+> undisciplined clocks — which the dashboard currently contradicts, because no record in the 2024
+> season states clock discipline at all.
+>
+> What remains reliably useful here is the domain material, which is not written down anywhere else:
+> §1 on why a VLF event is a perturbation rather than a ping, §2 on the five axes of availability,
+> the confounds list, §9's hard cases, and the vocabulary appendix.
+
 # Ionosphere Data Availability Dashboard — GUI Design Brief
 
 **Project:** SEAL Embedded / Ionosphere Team, University of Washington

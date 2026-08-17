@@ -165,7 +165,7 @@ does the same as `python run.py`; Flask is only needed for `serve`.
 `web/` is served as-is: no build step, no framework toolchain, no bundler.
 
 The dashboard is the interface — four views over one record set, with the timeline for "can I use
-last night" and the campaign view for "what did we yield". It reads `web/data/2024-campaign.json`,
+last night" and the campaign view for "what did we yield". It reads `web/data/campaign.json`,
 which `publish` generates, and falls back to a synthetic dataset if that file is missing. It says
 which one it used; a synthetic set that looks real is the worse failure.
 

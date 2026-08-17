@@ -41,7 +41,7 @@ class CampaignConfig:
     """
 
     enabled: bool = False
-    path: Path = Path("data/2024-campaign.json")
+    path: Path = Path("data/campaign.json")
     dataset_version: str = "measured-v1"
     scanner_version: str = "none — coverage is transcribed, not scanned"
     site_altitude_m: float | None = None

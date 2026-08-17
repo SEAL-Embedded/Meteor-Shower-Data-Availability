@@ -4,7 +4,7 @@
 // records tagged provenance:'sheet_2024' are the real cases quoted in the brief.
 // Everything else is SYNTHETIC filler generated here so whole-campaign layouts
 // have plausible density to be judged against. The dashboard badges this.
-// data/2024-campaign.json now exists: it is generated from the lab record by
+// data/campaign.json now exists: it is generated from the lab record by
 //   python -m availability publish --config config.toml
 // Call loadDataset() to use it. It falls back to buildDataset() when the file is
 // absent or unreadable, so the dashboard still runs standalone — and it says which
@@ -48,9 +48,9 @@ export const INSTRUMENTS = [
 ];
 
 export const SHOWERS = [
-  { name: 'S. δ-Aquariids', peak: D('2024-07-30T12:00:00') },
+  { name: 'Southern δ-Aquariids', peak: D('2024-07-30T12:00:00') },
   { name: 'α-Capricornids', peak: D('2024-07-30T20:00:00'), note: 'slow bright fireballs' },
-  { name: 'Perseids max', peak: D('2024-08-12T14:00:00'), major: true, note: 'waxing gibbous Moon suppresses optical reporting' },
+  { name: 'Perseids', peak: D('2024-08-12T14:00:00'), major: true, note: 'waxing gibbous Moon suppresses optical reporting' },
   { name: 'κ-Cygnids', peak: D('2024-08-17T12:00:00') },
   { name: 'Aurigids', peak: D('2024-09-01T00:00:00') }
 ];
@@ -409,7 +409,7 @@ export function buildDataset() {
 // omits keeps the defaults in cov()/evt() above, so an absent field reads as
 // "not determined" rather than as an invented value.
 
-export const DATASET_URL = 'data/2024-campaign.json';
+export const DATASET_URL = 'data/campaign.json';
 
 export async function loadDataset(url = DATASET_URL) {
   let raw;
