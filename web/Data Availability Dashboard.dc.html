@@ -1265,20 +1265,46 @@ class Component extends DCLogic {
         }
         hits.push({ type: 'rec', rec: ev, x1: Math.min(ax, bx) - 3, x2: Math.max(ax, bx) + 3, y1: cy - 7, y2: cy + 7 });
       });
+      // Event labels, placed left to right into slots as wide as the longest label in view. One is
+      // drawn only where a whole free slot remains since the last one placed; the rest are left
+      // unlabelled, and their marks are still there to hover. Every label used to be drawn
+      // regardless, capped at an arbitrary fourteen: at a dense hour that put 14 labels on the row
+      // forming 52 overlapping pairs, which is unreadable and hides the very thing it names.
+      //
+      // Uniform slots rather than each label's own width, deliberately. Measuring each one lets a
+      // short label squeeze between two long ones, so how crowded the row looks depends on which
+      // events happen to fall in it rather than on how far you have zoomed — the row would thin out
+      // and refill as you pan, which reads as flicker rather than as information.
+      //
+      // 0.52 em per character is this font's mean advance, measured across the real labels, which
+      // run 0.436 to 0.474; the margin is deliberate. Over-estimating costs a label, under-
+      // estimating overlaps them. Widths here are viewBox units, the same space the marks are laid
+      // out in, so this holds at any window size without being recomputed against the screen.
+      const LABEL_FONT = 14, LABEL_EM = 0.52, LABEL_GAP = 12;
       if (span < 3 * H && evs.length <= 260) {
-        evs.filter((ev) => ev.start > t0 && ev.start < t1).slice(0, 14).forEach((ev, ei) => {
-          if (!ev.label) return;
+        const inView = evs.filter((ev) => ev.label && ev.start > t0 && ev.start < t1);
+        const slot = inView.reduce((w, ev) => Math.max(w, ev.label.length), 0) * LABEL_FONT * LABEL_EM;
+        let filled = -Infinity;
+        inView.forEach((ev, ei) => {
           // Anchored on the raw time, so a label could be drawn left of the plot and run across the
           // lane names in the gutter. Labels belong to events inside the viewport; anchor them
-          // there, and where one would still overrun the right edge — these run to 30-odd
-          // characters — hang it off the left of its mark instead of letting it escape.
-          const lx = x(ev.start) + 7;
+          // there, and where a slot would not fit to the right — these run to 58 characters — hang
+          // it off the left of its mark instead of letting it escape.
+          const at = x(ev.start), lx = at + 7;
           if (lx < L || lx > L + W) return;
-          const over = lx + ev.label.length * 14 * 0.55 > L + W;
+          const flip = lx + slot > L + W;
+          const from = flip ? at - 7 - slot : lx;
+          // The slot has to start inside the plot as well as clear of the last label placed. A
+          // flipped one runs leftward, so without the first of these it walks off the left edge and
+          // across the lane names -- and on a narrow window, where a slot is wider than the plot,
+          // every label flips. None is then drawn, which is the honest answer: the marks are still
+          // there to hover, and a row of labels nothing can be read from is worse than no row.
+          if (from < Math.max(L, filled + LABEL_GAP)) return;
           kids.push(this.e('text', {
-            key: 'el' + si + ei, x: over ? x(ev.start) - 7 : lx, y: cy - capH - 3,
-            fontSize: 14, fill: C.n500, textAnchor: over ? 'end' : 'start'
+            key: 'el' + si + ei, x: flip ? at - 7 : lx, y: cy - capH - 3,
+            fontSize: LABEL_FONT, fill: C.n500, textAnchor: flip ? 'end' : 'start'
           }, ev.label));
+          filled = from + slot;
         });
       }
     });
