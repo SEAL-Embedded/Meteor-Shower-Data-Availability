@@ -1445,11 +1445,15 @@ class Component extends DCLogic {
     const cell = 13, mode = this.state.matrixMode, kids = [this.defs()];
     const width = 1180;
     let x = 0, y = 0, n = 0;
-    const put = (marks, text) => {
-      const w = cell + 7 + this.textWidth(text, 14) + 26;
+    // markW is how wide this item's swatch actually is. It is a parameter rather than always `cell`
+    // because the shade ramp is three squares wide, and a label placed a single cell from the left
+    // edge landed on top of the second and third of them.
+    const put = (marks, text, markW) => {
+      const mw = markW || cell;
+      const w = mw + 7 + this.textWidth(text, 14) + 26;
       if (x + w > width) { x = 0; y += cell + 13; }
       kids.push(...marks(x, y, n));
-      kids.push(this.e('text', { key: 'lt' + n, x: x + cell + 7, y: y + cell - 1.5, fontSize: 14, fill: C.n500 }, text));
+      kids.push(this.e('text', { key: 'lt' + n, x: x + mw + 7, y: y + cell - 1.5, fontSize: 14, fill: C.n500 }, text));
       x += w; n += 1;
     };
     const swatch = (attrs) => (bx, by, i) => [this.e('rect', Object.assign(
@@ -1460,8 +1464,8 @@ class Component extends DCLogic {
       key: 'lr' + i + k, x: bx + k * (cell + 1), y: by, width: cell, height: cell,
       fill: mode === 'events' ? C.n500 : C.a500, opacity: op
     })), mode === 'events' ? 'events in the hour — saturates at 12'
-      : mode === 'usable' ? 'share of the hour usable' : 'share of the hour covered');
-    x += 2 * (cell + 1);
+      : mode === 'usable' ? 'share of the hour usable' : 'share of the hour covered',
+      3 * cell + 2);
     put(swatch({ fill: 'none', stroke: C.n900, strokeWidth: 1 }), 'nothing recorded that hour');
     if (mode !== 'events') {
       put(swatch({ fill: 'url(#p-hatch)' }), 'invalid or corrupt');
