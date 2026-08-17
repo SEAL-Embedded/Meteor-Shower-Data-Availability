@@ -277,6 +277,61 @@ Two rules hold in that translation, and both exist to stop a value being invente
 for — a year of catalogue events must not stretch a 45-night observing run across the whole calendar.
 Events outside it are still included.
 
+### Corrections
+
+Human judgement, merged over the generated record at publish time and marked where it lands.
+
+The dashboard's manage mode lets someone mark a record disputed, write a processing conclusion, or
+move it to `published`. Those edits live in one browser until they are exported; committing the
+exported patch to `records/corrections.json` — the path is `[corrections] path` in the config — is
+what makes them survive the next `publish`. **The pull request over that file is the inspection
+step**: a person reads the correction before it reaches the record, and the patch carries who made
+it and when.
+
+The file is exactly what the *Export patch (JSON)* button produces, so nothing translates in
+between:
+
+```json
+{
+  "datasetVersion": "measured-v1",
+  "mergePolicy": "scanner-wins",
+  "edits": {
+    "ams-3647-2024": {
+      "id": "ams-3647-2024",
+      "disputed": true,
+      "disputeNote": "witness magnitude is brighter than the Sun; almost certainly overshoot",
+      "provenance": "manual"
+    }
+  }
+}
+```
+
+**The scanner wins.** A correction may set only `disputed`, `disputeNote`, `publishState`,
+`processingConclusion` and `processingResultUrl` — judgement, which no adapter produces. It may not
+set anything a source measured. A patch naming a measured field has that field refused and reported;
+the rest of the patch still applies. Disagreeing with a measurement is what `disputed` is for: the
+record keeps what the source said, and carries the objection beside it. That is the same distinction
+the verdicts rest on, applied to our own second thoughts.
+
+A record a correction touched gains `"corrected": true`. Its `provenance` is **not** overwritten —
+that field names the source the record came from, and a human having annotated it does not change
+where it came from.
+
+An edit carrying `"_added": true` is a record someone entered by hand — an event no catalogue holds.
+Those are appended with `provenance: "manual"`, since no source owns them to be overruled by.
+
+`meta.corrections` reports what happened: `{ "applied": 2, "added": 0, "source": "…" }`. It is
+absent when there were none, like every other field here.
+
+**Nothing that fails to apply is swallowed.** A correction naming a record the regenerated set no
+longer holds, or a patch declaring a `mergePolicy` this build does not implement, becomes a warning
+on the run — and `publish --strict` refuses to write at all. A correction quietly pointing at
+nothing is the failure this record exists to rule out.
+
+The corrections apply to the dashboard dataset only. The contract snapshots above are unchanged:
+`disputed` and `publishState` are not fields in schema 1.0, and promoting them would be a minor
+version bump rather than something to do quietly.
+
 ### `jumps`
 
 Notable windows in the record, for the dashboard's jump bar. Optional.

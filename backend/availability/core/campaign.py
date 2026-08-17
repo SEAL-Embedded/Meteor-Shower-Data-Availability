@@ -23,6 +23,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from ..models import CoverageInterval, Event, EventKind, Instrument, Quality, Span
+from .corrections import apply_to as apply_corrections
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..config import CampaignConfig
@@ -80,6 +81,27 @@ def campaign_payload(store: "Store", config: "CampaignConfig") -> dict[str, Any]
         ],
         "events": [_event(e, config) for e in store.events],
     }
+    # Reviewed human corrections, merged last so they sit on top of what the sources said without
+    # having rewritten it. Only judgement fields can land here -- the policy is enforced when the
+    # patch is read, and anything it refused is already a warning on the store.
+    corrections = getattr(store, "corrections", None)
+    if corrections:
+        applied, problems = apply_corrections(
+            payload["coverage"] + payload["events"], corrections
+        )
+        # Recorded in both places on purpose: on the store so the operator sees it in the summary,
+        # and on the corrections themselves so --strict can refuse a publish over a patch that did
+        # not land, without having to pattern-match warning text.
+        store.warnings.extend(problems)
+        corrections.warnings.extend(problems)
+        for record in corrections.added:
+            payload["events"].append(dict(record, provenance="manual"))
+        payload["meta"]["corrections"] = {
+            "applied": applied,
+            "added": len(corrections.added),
+            "source": corrections.source,
+        }
+
     jumps = _jumps(store)
     if jumps:
         payload["jumps"] = jumps

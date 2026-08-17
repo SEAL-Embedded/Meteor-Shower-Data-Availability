@@ -1,0 +1,33 @@
+{
+  "_comment": [
+    "A worked example. Copy to corrections.json to make it live -- this file is never read.",
+    "This is exactly what the dashboard's manage mode writes when you press Export patch (JSON),",
+    "so the normal route is to make the edits on the page, download the patch, and commit it.",
+    "",
+    "The merge policy is scanner-wins. A correction may set publishState, processingConclusion,",
+    "processingResultUrl, disputed and disputeNote -- judgement, which no adapter produces. It may",
+    "not set anything a source measured. If you disagree with a measured value, dispute it: the",
+    "record keeps what the source said and carries the objection beside it.",
+    "",
+    "Anything that does not apply is reported, and publish --strict refuses over it."
+  ],
+  "datasetVersion": "measured-v1",
+  "generated": "2026-08-17T09:00:00Z",
+  "mergePolicy": "scanner-wins",
+  "edits": {
+    "sphere-vlf-seattle-1722211200000": {
+      "id": "sphere-vlf-seattle-1722211200000",
+      "publishState": "published",
+      "processingConclusion": "Reviewed against the raw capture; clean throughout.",
+      "provenance": "manual",
+      "_editedAt": "2026-08-17T09:00:00Z"
+    },
+    "ams-3647-2024": {
+      "id": "ams-3647-2024",
+      "disputed": true,
+      "disputeNote": "Witness magnitude is brighter than the Sun. Almost certainly overshoot; the AMS value stands until they revise it.",
+      "provenance": "manual",
+      "_editedAt": "2026-08-17T09:05:00Z"
+    }
+  }
+}

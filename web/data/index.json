@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-08-17T05:03:07Z",
+  "generated_at": "2026-08-17T07:07:47Z",
   "range": {
     "start": "2024-07-26T02:02:00Z",
     "end": "2024-09-09T01:15:00Z"
@@ -124,7 +124,7 @@
       "kind": "coverage",
       "url": null,
       "attribution": null,
-      "fetched_at": "2026-08-17T05:00:00Z",
+      "fetched_at": "2026-08-17T07:07:38Z",
       "status": "ok",
       "detail": null
     },
@@ -134,7 +134,7 @@
       "kind": "event",
       "url": "https://fireball.amsmeteors.org/",
       "attribution": "Fireball reports courtesy of the American Meteor Society",
-      "fetched_at": "2026-08-17T05:03:07Z",
+      "fetched_at": "2026-08-17T07:07:47Z",
       "status": "ok",
       "detail": "4 beyond 5000 km; 9 kept with no determinable position; served entirely from cache"
     }

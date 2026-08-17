@@ -68,6 +68,13 @@ class Config:
     output_dir: Path
     allowed_origins: list[str] = field(default_factory=list)
     campaign: CampaignConfig = field(default_factory=CampaignConfig)
+    corrections_path: Path | None = None
+    """Where a reviewed patch of human corrections lives, if there is one.
+
+    The dashboard's manage mode exports edits as JSON; committing that file here is what makes them
+    survive the next publish. A pull request over this path is the inspection step -- the merge
+    policy is scanner-wins, so what lands is judgement, never a rewritten measurement.
+    """
     events_within_coverage: bool = False
     """Keep only events falling inside some instrument's characterised period.
 
@@ -114,6 +121,12 @@ class Config:
             output_dir=Path(output_section.get("directory", "web/data")),
             allowed_origins=list(raw.get("api", {}).get("allowed_origins", [])),
             campaign=_campaign(raw.get("campaign", {})),
+            corrections_path=(
+                Path(raw["corrections"]["path"])
+                if raw.get("corrections", {}).get("path")
+                and raw.get("corrections", {}).get("enabled", True)
+                else None
+            ),
             events_within_coverage=bool(
                 raw.get("events", {}).get("within_coverage", False)
             ),

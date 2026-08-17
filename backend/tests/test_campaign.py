@@ -274,3 +274,132 @@ class TestJumps:
         store = Store.build(config)
         monkeypatch.setattr(type(store), "range", property(lambda self: None))
         assert "jumps" not in campaign_payload(store, config.campaign)
+
+
+CORRECTIONS = """{
+  "datasetVersion": "measured-v1",
+  "generated": "2026-08-17T09:00:00Z",
+  "mergePolicy": "scanner-wins",
+  "edits": {
+    "sphere-vlf-seattle-1722211200000": {
+      "id": "sphere-vlf-seattle-1722211200000",
+      "publishState": "published",
+      "processingConclusion": "clean; used in the Perseid analysis",
+      "provenance": "manual",
+      "_editedAt": "2026-08-17T09:00:00Z"
+    },
+    "sphere-vlf-seattle-1722247200000": {
+      "id": "sphere-vlf-seattle-1722247200000",
+      "disputed": true,
+      "disputeNote": "sheet says major loss at 10:00; the raw files start at 10:31",
+      "provenance": "manual"
+    }
+  }
+}"""
+
+
+def _with_corrections(tmp_path, patch: str, *, extra_config: str = "") -> tuple:
+    (tmp_path / "coverage.csv").write_text(COVERAGE_CSV, encoding="utf-8")
+    (tmp_path / "events.csv").write_text(EVENTS_CSV, encoding="utf-8")
+    (tmp_path / "corrections.json").write_text(patch, encoding="utf-8")
+    (tmp_path / "config.toml").write_text(
+        CONFIG_TOML.format(path="data/campaign.json")
+        + '\n[corrections]\nenabled = true\npath = "corrections.json"\n'
+        + extra_config,
+        encoding="utf-8",
+    )
+    config = Config.load(tmp_path / "config.toml")
+    store = Store.build(config)
+    return store, campaign_payload(store, config.campaign)
+
+
+class TestCorrections:
+    """Human corrections merged over the generated record.
+
+    The policy is the lab's, recorded in docs/design-notes-2026-08.md: the scanner wins. A
+    correction carries judgement -- disputed, a conclusion, a publish state -- and must never
+    rewrite what a source measured.
+    """
+
+    def test_judgement_fields_are_applied(self, tmp_path):
+        _, payload = _with_corrections(tmp_path, CORRECTIONS)
+        record = next(
+            r for r in payload["coverage"] if r["id"] == "sphere-vlf-seattle-1722211200000"
+        )
+        assert record["publishState"] == "published"
+        assert record["processingConclusion"].startswith("clean")
+
+    def test_a_corrected_record_says_a_human_touched_it(self, tmp_path):
+        _, payload = _with_corrections(tmp_path, CORRECTIONS)
+        record = next(
+            r for r in payload["coverage"] if r["id"] == "sphere-vlf-seattle-1722211200000"
+        )
+        assert record["corrected"] is True
+        # ...without losing which source the record came from.
+        assert record["provenance"] == "sheet_2024"
+
+    def test_a_dispute_keeps_what_the_source_said(self, tmp_path):
+        _, payload = _with_corrections(tmp_path, CORRECTIONS)
+        record = next(
+            r for r in payload["coverage"] if r["id"] == "sphere-vlf-seattle-1722247200000"
+        )
+        assert record["disputed"] is True
+        assert "10:31" in record["disputeNote"]
+        # The measurement itself is untouched: lost quality still reports as it was ingested.
+        assert record["validation"] == "invalid"
+        assert record["lossSeverity"] == "major"
+
+    def test_a_correction_to_a_measured_field_is_refused_and_reported(self, tmp_path):
+        patch = """{
+          "mergePolicy": "scanner-wins",
+          "edits": {"sphere-vlf-seattle-1722211200000": {"validation": "invalid", "end": 1}}
+        }"""
+        store, payload = _with_corrections(tmp_path, patch)
+        record = next(
+            r for r in payload["coverage"] if r["id"] == "sphere-vlf-seattle-1722211200000"
+        )
+        assert record["validation"] == "valid"          # unchanged
+        assert "corrected" not in record
+        assert any("scanner wins" in w for w in store.warnings)
+        assert any("validation" in w and "end" in w for w in store.warnings)
+
+    def test_a_correction_naming_no_record_is_reported_not_ignored(self, tmp_path):
+        patch = """{"mergePolicy": "scanner-wins",
+                    "edits": {"nope-123": {"publishState": "published"}}}"""
+        store, _ = _with_corrections(tmp_path, patch)
+        assert any("not in the published set" in w for w in store.warnings)
+
+    def test_a_hand_entered_event_is_added_and_marked_manual(self, tmp_path):
+        patch = """{
+          "mergePolicy": "scanner-wins",
+          "edits": {"manual-1": {"_added": true, "recordKind": "event", "id": "manual-1",
+                                 "eventClass": "meteor", "start": 1722229200000,
+                                 "label": "Seen from the roof"}}
+        }"""
+        _, payload = _with_corrections(tmp_path, patch)
+        added = next(e for e in payload["events"] if e["id"] == "manual-1")
+        assert added["provenance"] == "manual"
+        assert added["label"] == "Seen from the roof"
+
+    def test_a_patch_under_an_unknown_policy_is_refused_whole(self, tmp_path):
+        patch = """{"mergePolicy": "human-wins",
+                    "edits": {"sphere-vlf-seattle-1722211200000": {"publishState": "published"}}}"""
+        store, payload = _with_corrections(tmp_path, patch)
+        record = next(
+            r for r in payload["coverage"] if r["id"] == "sphere-vlf-seattle-1722211200000"
+        )
+        assert "publishState" not in record
+        assert any("does not implement" in w for w in store.warnings)
+
+    def test_no_corrections_file_is_not_an_error(self, tmp_path):
+        (tmp_path / "coverage.csv").write_text(COVERAGE_CSV, encoding="utf-8")
+        (tmp_path / "events.csv").write_text(EVENTS_CSV, encoding="utf-8")
+        (tmp_path / "config.toml").write_text(
+            CONFIG_TOML.format(path="data/campaign.json")
+            + '\n[corrections]\nenabled = true\npath = "absent.json"\n',
+            encoding="utf-8",
+        )
+        config = Config.load(tmp_path / "config.toml")
+        store = Store.build(config)
+        assert store.warnings == []
+        assert "corrections" not in campaign_payload(store, config.campaign)["meta"]
