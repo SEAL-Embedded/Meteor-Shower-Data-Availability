@@ -1475,11 +1475,18 @@ class Component extends DCLogic {
         this.e('text', { key: 'lx' + i, x: bx + cell / 2, y: by + cell - 1.5, fontSize: 12, fill: C.a300, textAnchor: 'middle', fontWeight: 700 }, '!')
       ], 'disputed / needs review');
     }
-    const h = y + cell + 20;
+    // The caveat sits clear of the swatch rows above it, and on two lines. As one line it measured
+    // 1178 of the 1180 units available — two units from overflowing on any font that sets a shade
+    // wider — and its ascender started exactly where the wrapped row's descenders ended.
+    const rowsBottom = y + cell;
+    const noteA = rowsBottom + 20, noteB = noteA + 16;
     if (mode !== 'events') {
-      kids.push(this.e('text', { key: 'lnote', x: 0, y: h - 5, fontSize: 13.5, fill: C.n600 },
-        'An hour can hold several records; the cell shows the most serious of them, in the order above. A cell is one hour whatever its length, so a 20-minute window is as loud as a 20-hour one.'));
+      kids.push(this.e('text', { key: 'lnA', x: 0, y: noteA, fontSize: 13.5, fill: C.n600 },
+        'An hour can hold several records; the cell shows the most serious of them, in the order above.'));
+      kids.push(this.e('text', { key: 'lnB', x: 0, y: noteB, fontSize: 13.5, fill: C.n600 },
+        'A cell is one hour whatever its length, so a 20-minute window is as loud as a 20-hour one.'));
     }
+    const h = (mode === 'events' ? rowsBottom : noteB) + 8;
     return this.e('svg', { width: '100%', height: h, viewBox: `0 0 ${width} ${h}`, style: { display: 'block' } }, kids);
   }
 
