@@ -286,7 +286,7 @@
 
       <div style="display: flex; align-items: baseline; gap: var(--space-4); margin-bottom: var(--space-3); flex-wrap: wrap;">
         <h5 style="margin: 0; font-size: 22px;">Whole campaign as a day × hour matrix</h5>
-        <span style="font-size: 16.5px; color: var(--color-neutral-500);">Carried forward from the sheet’s per-instrument tabs. Equal weight per hour, so short windows stay findable — but duration is lost.</span>
+        <span style="font-size: 16.5px; color: var(--color-neutral-500);">Carried forward from the sheet’s per-instrument tabs. Equal weight per hour, so short windows stay findable — but duration, overlap and uncertainty are not shown. Click any cell to open that hour in the Timeline.</span>
         <div class="seg" style="margin-left: auto;">
           <sc-for list="{{ matrixModes }}" as="m" hint-placeholder-count="3">
             <label class="seg-opt" style="{{ m.style }}"><input type="radio" name="mmode" checked="{{ m.checked }}" onChange="{{ m.set }}">{{ m.label }}</label>
@@ -297,7 +297,10 @@
       <!-- Outside the horizontal scroller on purpose: a legend that scrolls away from the thing it
            explains is no better than no legend. -->
       <div style="margin-top: var(--space-2);">{{ matrixLegendEl }}</div>
-      <p style="max-width: 82ch; font-size: 18.5px; line-height: 1.6; color: var(--color-neutral-400); margin-top: var(--space-4);">Both are above so you can judge §12’s open question. My read: keep the matrix, but as the campaign-scale overview only — it is the fastest way to see a six-week shape and the only view where a lone 20-minute window is as loud as a 20-hour one. It cannot express duration, overlap, or uncertainty, so it should hand off to the timeline on click rather than try to carry quality.</p>
+      <!-- A paragraph addressed to the lab used to sit here, arguing which of the two campaign
+           views to keep and citing the design brief by section number. It was correspondence about
+           the page, published on the page. What a reader actually needs — what each view can and
+           cannot express, and that a click hands off to the Timeline — is said above each one. -->
     </div>
   </sc-if>
 

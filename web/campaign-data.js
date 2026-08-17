@@ -26,7 +26,9 @@ export const CAMPAIGN = { start: D('2024-07-26T00:00:00'), end: D('2024-09-09T00
 export const DATASET_META = {
   datasetVersion: 'synthetic-v0.3',
   scanTimestamp: '2026-08-16T04:00:00Z',
-  scannerVersion: 'none — no scanner exists yet (§0.1 Q2)',
+  // Rendered in the header, so it says what it is rather than citing a question number from the
+  // design brief — a reader of the page has no way to look that up.
+  scannerVersion: 'none — this set is generated in the browser, not scanned',
   provenance: 'synthetic',
   sourceNote: 'Real cases quoted from the 2024 “Big Sheet”; all other density is invented.'
 };
