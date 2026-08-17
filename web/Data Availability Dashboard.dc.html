@@ -294,6 +294,9 @@
         </div>
       </div>
       <div class="scroll" style="overflow-x: auto; padding-bottom: var(--space-3);">{{ matrixEl }}</div>
+      <!-- Outside the horizontal scroller on purpose: a legend that scrolls away from the thing it
+           explains is no better than no legend. -->
+      <div style="margin-top: var(--space-2);">{{ matrixLegendEl }}</div>
       <p style="max-width: 82ch; font-size: 18.5px; line-height: 1.6; color: var(--color-neutral-400); margin-top: var(--space-4);">Both are above so you can judge §12’s open question. My read: keep the matrix, but as the campaign-scale overview only — it is the fastest way to see a six-week shape and the only view where a lone 20-minute window is as loud as a 20-hour one. It cannot express duration, overlap, or uncertainty, so it should hand off to the timeline on click rather than try to carry quality.</p>
     </div>
   </sc-if>
@@ -415,7 +418,15 @@ class Component extends DCLogic {
       const el = this.plotRef && this.plotRef.current;
       if (el && !this._observed) { this.ro.observe(el); this._observed = true; }
     }, 300);
-    this._up = () => { this._drag = null; };
+    // A click on empty plot — pressed and released without panning — clears the pinned record.
+    // Without this there is no way to unpin: the first click on any mark pinned it for the rest of
+    // the session, and since the inspector falls back to the pin whenever nothing is under the
+    // cursor, the panel looked permanently stuck on whatever you last touched.
+    this._up = () => {
+      const d = this._drag;
+      this._drag = null;
+      if (d && d.kind === 'pan' && !d.moved && this.state.selId) this.setState({ selId: null });
+    };
     this._move = (e) => this.onWindowMove(e);
     window.addEventListener('mouseup', this._up);
     window.addEventListener('mousemove', this._move);
@@ -851,6 +862,7 @@ class Component extends DCLogic {
       this.panTo(Math.max(d.t0, Math.min(d.t1, t)));
     } else if (d.kind === 'pan') {
       const dt = ((d.x - ev.clientX) / d.plotW) * d.span;
+      if (Math.abs(d.x - ev.clientX) > 3) d.moved = true;
       this.setState({ vs: d.vs + dt, ve: d.ve + dt });
     }
   }
@@ -1005,9 +1017,11 @@ class Component extends DCLogic {
     kids.push(this.e('line', { key: 'axl', x1: 0, y1: AX - 1, x2: L + W, y2: AX - 1, stroke: C.n800, strokeWidth: 1 }));
     kids.push(this.e('line', { key: 'gut', x1: L - 1, y1: 0, x2: L - 1, y2: 1e4, stroke: C.n800, strokeWidth: 1 }));
 
-    // ── sensitivity strip. Kept clear of the axis rule above it, which it used to sit one unit
-    // under, so the two read as a single band.
-    y += 8;
+    // ── sensitivity strip. The gap above it is not just breathing room: the cursor's time readout
+    // lives in it. That readout used to sit on the axis and mask the date labels behind it, which
+    // traded one reading for another — you could see where the cursor was or what month it was, not
+    // both. Giving it its own band below the rule keeps the axis intact.
+    y += 22;
     kids.push(...this.skyBands(L, W, t0, t1, y, SKY, 2));
     kids.push(this.e('text', { key: 'skl', x: 0, y: y + SKY / 2 + 5, fontSize: 14.5, fill: C.n400 }, 'Sky sensitivity'));
     y += SKY + 8;
@@ -1016,7 +1030,7 @@ class Component extends DCLogic {
     // so the chart fills its container instead of ending halfway down.
     const rows = this.laneRows();
     const OVH = 30, INTH = 20;
-    const chrome = AX + 8 + SKY + 8 + 8 + OVH + 6 + INTH + 5 + 12;
+    const chrome = AX + 22 + SKY + 8 + 8 + OVH + 6 + INTH + 5 + 12;
     const free = Math.max(200, (this.state.plotH || 460) - chrome);
     const laneBudget = free * 0.52, evBudget = free * 0.48;
     const totalW = rows.reduce((a, r) => a + r.w, 0) || 1;
@@ -1157,7 +1171,8 @@ class Component extends DCLogic {
     // ── overlap lane
     y += 8;
     kids.push(this.e('text', { key: 'ovl', x: 0, y: y + 14, fontSize: 16.5, fill: C.a300 }, 'Overlap 2+'));
-    kids.push(this.e('text', { key: 'ovl2', x: 0, y: y + 28, fontSize: 14, fill: C.n600 }, 'usable only'));
+    // 31, not 28: at 16.5 over 14 the two baselines were 14 apart and their ink overlapped by one.
+    kids.push(this.e('text', { key: 'ovl2', x: 0, y: y + 31, fontSize: 14, fill: C.n600 }, 'usable only'));
     const ovh = OVH;
     kids.push(this.e('rect', { key: 'ovbg', x: L, y, width: W, height: ovh, fill: C.n900, opacity: 0.6 }));
     const ovAll = this.overlapSegments();
@@ -1333,13 +1348,13 @@ class Component extends DCLogic {
 
     // Crosshair: always present, moved by direct DOM writes on mousemove so the
     // whole plot is not re-rendered per pixel.
-    kids.push(this.e('line', { key: 'ch', id: 'xh-l', x1: -99, y1: 22, x2: -99, y2: y, stroke: C.accent, strokeWidth: 0.8, opacity: 0.55 }));
-    // The readout sits on the axis baseline and masks the tick labels behind it, so the exact time
-    // replaces the tick it is standing on rather than being written across it. It used to sit at
-    // baseline 37 with a mask covering y 22-42, while the tick glyphs run 32.6 to 50.4: the two
-    // texts overlapped, and the mask was too short to hide what it was overlapping.
-    kids.push(this.e('rect', { key: 'chb', id: 'xh-b', x: -199, y: 31, width: 160, height: 21, fill: C.bg, opacity: 0.95 }));
-    kids.push(this.e('text', { key: 'cht', id: 'xh-t', x: -99, y: 47, fontSize: 14.5, fill: C.a300, textAnchor: 'middle' }, ''));
+    // The crosshair starts at the axis rule rather than above it, so it no longer draws through the
+    // date labels on its way down.
+    kids.push(this.e('line', { key: 'ch', id: 'xh-l', x1: -99, y1: AX - 1, x2: -99, y2: y, stroke: C.accent, strokeWidth: 0.8, opacity: 0.55 }));
+    // The time readout sits in the reserved band below the axis, not on top of it. Tick glyphs run
+    // 32.5 to 50.1; this sits at 60 to 74, so the month and date behind the cursor stay readable.
+    kids.push(this.e('rect', { key: 'chb', id: 'xh-b', x: -199, y: 60, width: 160, height: 18, rx: 2, fill: C.bg, opacity: 0.95 }));
+    kids.push(this.e('text', { key: 'cht', id: 'xh-t', x: -99, y: 74, fontSize: 14.5, fill: C.a300, textAnchor: 'middle' }, ''));
 
     this._hits = hits;
     this._plotGeom = { L, W, t0, t1, vbw: L + W + 12 };
@@ -1380,11 +1395,29 @@ class Component extends DCLogic {
       fill: s.free ? 'url(#p-hatch)' : C.a500
     })));
     y += 26;
+    // Shower names drop to a second line where the one above is still occupied. On one line the
+    // S. δ-Aquariids and the α-Capricornids overlapped by 86 units: they peak eight hours apart,
+    // which at campaign scale is eight units, and their names are a hundred wide. The timeline's
+    // ribbon already tiers for the same reason; this strip did not.
+    // 18 rather than the font's own 14: a 14-unit font occupies a 16.7-unit em box, so tiers a
+    // line-height apart still overlap by three.
+    const TIER = 18, tierFree = [-1e9, -1e9];
     ds.showers.forEach((sh, i) => {
-      kids.push(this.e('line', { key: 'sw' + i, x1: x(sh.peak), y1: TOP + SKYH, x2: x(sh.peak), y2: y, stroke: sh.major ? C.accent : C.n700, strokeWidth: sh.major ? 1.2 : 0.8, strokeDasharray: sh.major ? '' : '2 2' }));
-      kids.push(this.e('text', { key: 'st' + i, x: x(sh.peak) + 3, y: y + 10, fontSize: 14, fill: sh.major ? C.a300 : C.n500 }, sh.name));
+      const px = x(sh.peak);
+      let tier = tierFree.findIndex((edge) => px + 3 >= edge);
+      if (tier < 0) tier = 0;
+      tierFree[tier] = px + 3 + this.textWidth(sh.name, 14) + 10;
+      // Every marker stops at the top of the label block, whatever tier its own name landed on. A
+      // line carried down to its own tier crosses each row above it: the α-Capricornids marker,
+      // eight units from the δ-Aquariids, ran straight through that label's text. Association is
+      // carried by the x position instead, which is what the reader follows anyway.
+      // Stops five units short of y, not at it: the first tier's baseline is y + 10 and its
+      // ascender reaches about y - 3.5, so a line ending exactly at y still clipped the top of the
+      // text it was pointing at.
+      kids.push(this.e('line', { key: 'sw' + i, x1: px, y1: TOP + SKYH, x2: px, y2: y - 5, stroke: sh.major ? C.accent : C.n700, strokeWidth: sh.major ? 1.2 : 0.8, strokeDasharray: sh.major ? '' : '2 2' }));
+      kids.push(this.e('text', { key: 'st' + i, x: px + 3, y: y + 10 + tier * TIER, fontSize: 14, fill: sh.major ? C.a300 : C.n500 }, sh.name));
     });
-    y += 16;
+    y += 38;
     for (let t = t0; t <= t1; t += 7 * 24 * H) kids.push(this.e('text', { key: 'd' + t, x: x(t), y: y + 10, fontSize: 14, fill: C.n500, textAnchor: 'middle' }, fmt(t, 'day').slice(5)));
     y += 16;
     return this.e('svg', {
@@ -1398,6 +1431,58 @@ class Component extends DCLogic {
   }
 
   // ── day × hour matrix ────────────────────────────────────────────────────
+  /** What the matrix's cells mean.
+   *
+   * The grid carries five separate encodings — shade, an empty outline, a hatch, an underbar and a
+   * glyph — and shipped explaining none of them, which makes them decoration rather than data. The
+   * legend is built from the same constants the cells are drawn from, so the two cannot drift, and
+   * it states only the encodings the current mode actually uses: the flags are not computed in
+   * event-count mode, so claiming them there would describe marks that never appear.
+   */
+  matrixLegend() {
+    const ds = this.state.ds, C = this.C;
+    if (!ds) return null;
+    const cell = 13, mode = this.state.matrixMode, kids = [this.defs()];
+    const width = 1180;
+    let x = 0, y = 0, n = 0;
+    const put = (marks, text) => {
+      const w = cell + 7 + this.textWidth(text, 14) + 26;
+      if (x + w > width) { x = 0; y += cell + 13; }
+      kids.push(...marks(x, y, n));
+      kids.push(this.e('text', { key: 'lt' + n, x: x + cell + 7, y: y + cell - 1.5, fontSize: 14, fill: C.n500 }, text));
+      x += w; n += 1;
+    };
+    const swatch = (attrs) => (bx, by, i) => [this.e('rect', Object.assign(
+      { key: 'ls' + i, x: bx, y: by, width: cell, height: cell }, attrs))];
+
+    // The shade ramp, drawn as three cells at the same opacities a real cell would take.
+    put((bx, by, i) => [0.22, 0.6, 1].map((op, k) => this.e('rect', {
+      key: 'lr' + i + k, x: bx + k * (cell + 1), y: by, width: cell, height: cell,
+      fill: mode === 'events' ? C.n500 : C.a500, opacity: op
+    })), mode === 'events' ? 'events in the hour — saturates at 12'
+      : mode === 'usable' ? 'share of the hour usable' : 'share of the hour covered');
+    x += 2 * (cell + 1);
+    put(swatch({ fill: 'none', stroke: C.n900, strokeWidth: 1 }), 'nothing recorded that hour');
+    if (mode !== 'events') {
+      put(swatch({ fill: 'url(#p-hatch)' }), 'invalid or corrupt');
+      put((bx, by, i) => [
+        this.e('rect', { key: 'll' + i, x: bx, y: by, width: cell, height: cell, fill: C.a500, opacity: 0.8 }),
+        this.e('rect', { key: 'lm' + i, x: bx, y: by + cell - 2, width: cell, height: 2, fill: C.n200 })
+      ], 'data loss in the hour');
+      put(swatch({ fill: 'none', stroke: C.n600, strokeDasharray: '2 2', strokeWidth: 1 }), 'unchecked — no claim made');
+      put((bx, by, i) => [
+        this.e('rect', { key: 'ld' + i, x: bx, y: by, width: cell, height: cell, fill: C.a500, opacity: 0.8 }),
+        this.e('text', { key: 'lx' + i, x: bx + cell / 2, y: by + cell - 1.5, fontSize: 12, fill: C.a300, textAnchor: 'middle', fontWeight: 700 }, '!')
+      ], 'disputed / needs review');
+    }
+    const h = y + cell + 20;
+    if (mode !== 'events') {
+      kids.push(this.e('text', { key: 'lnote', x: 0, y: h - 5, fontSize: 13.5, fill: C.n600 },
+        'An hour can hold several records; the cell shows the most serious of them, in the order above. A cell is one hour whatever its length, so a 20-minute window is as loud as a 20-hour one.'));
+    }
+    return this.e('svg', { width: '100%', height: h, viewBox: `0 0 ${width} ${h}`, style: { display: 'block' } }, kids);
+  }
+
   matrix() {
     const ds = this.state.ds, C = this.C;
     if (!ds) return null;
@@ -1639,7 +1724,11 @@ class Component extends DCLogic {
       rows.push({ label: 'affects', value: (r.instrumentIds || []).join(', ') });
     }
     return {
-      kicker: r.recordKind + (r.recordKind === 'coverage' ? ' record' : ''),
+      // Say whether this is following the cursor or held. A pinned record and a hovered one used to
+      // look identical, so when the cursor moved off a mark and the panel fell back to the pin, it
+      // read as the panel being stuck on the last thing rather than showing what you had pinned.
+      kicker: (!this.state.hoverId && this.state.selId ? 'pinned · click empty space to clear — ' : 'hovering — ')
+        + r.recordKind + (r.recordKind === 'coverage' ? ' record' : ''),
       title: r.label || r.id, badges, rows,
       note: r.disputeNote || '', hasNote: !!r.disputeNote
     };
@@ -1995,6 +2084,7 @@ class Component extends DCLogic {
       // campaign
       campaignStripEl: v === 'campaign' ? this.campaignStrip() : null,
       matrixEl: v === 'campaign' ? this.matrix() : null,
+      matrixLegendEl: v === 'campaign' ? this.matrixLegend() : null,
       recordCountLabel: ds ? `${ds.coverage.length} coverage · ${ds.events.length} events · ${ds.configs.length + ds.interference.length} context` : '',
       statCards: stats,
       matrixModes: [['coverage', 'Coverage'], ['usable', 'Usable only'], ['events', 'Event count']].map(([id, label]) => ({
