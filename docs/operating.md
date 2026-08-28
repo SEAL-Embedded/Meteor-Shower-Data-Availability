@@ -25,12 +25,18 @@ the id and vocabulary mappings, and the distance filter, none of which change pe
 
 **Copy the AMS cache; do not let it re-fetch.** It is about **5,200 files and 143 MB**, and it is a
 complete 2024 season. Regenerating it means several thousand requests to a volunteer-run site for
-data already collected. Copy the whole directory named by `cache_dir`, then point `cache_dir` at
-wherever it landed:
+data already collected. Copy the whole directory named by `cache_dir` to the same place on the
+workstation. Write the path with a variable rather than a username, because `cache_dir` expands
+`~` and environment variables — the same line then works on any account:
 
+```toml
+cache_dir = "%LOCALAPPDATA%/meteor-availability/cache/ams"
 ```
-%LOCALAPPDATA%\meteor-availability\cache\ams
-```
+
+A `cache_dir` that does not exist is not an error. The adapter creates it and starts fetching, so a
+path with the wrong username in it looks like a slow first run rather than a mistake. After the
+copy, confirm the cache is being read: `check` reports the AMS source as **served entirely from
+cache** when nothing was fetched.
 
 ### Then switch the live sources on
 

@@ -6,6 +6,7 @@ entry; adding a *kind* of data source is a config entry plus one ingest adapter.
 
 from __future__ import annotations
 
+import os
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -87,8 +88,15 @@ class Config:
         return next((i for i in self.instruments if i.id == instrument_id), None)
 
     def resolve(self, value: str | Path) -> Path:
-        """Resolve a configured path relative to the config file's directory."""
-        candidate = Path(value)
+        """Resolve a configured path relative to the config file's directory.
+
+        ``~`` and environment variables are expanded first, so a path can be written once and used
+        on more than one machine. That matters most for the AMS cache: it is deliberately outside
+        the repository, so it is named by an absolute path, and an absolute path with a username in
+        it silently misses on any other account -- the adapter finds no cache, creates an empty one,
+        and re-fetches several thousand pages from a volunteer-run site rather than failing.
+        """
+        candidate = Path(os.path.expandvars(str(value))).expanduser()
         return candidate if candidate.is_absolute() else (self.base_dir / candidate)
 
     @classmethod
