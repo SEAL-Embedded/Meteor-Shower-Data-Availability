@@ -4,6 +4,75 @@ Two things run on the machine that holds the instrument data: a scheduled **publ
 static site current, and an optional **serve** that answers live queries. The published snapshot is
 the floor — it is what the site falls back to — and the live API is the enhancement on top.
 
+## Moving to the machine that holds the data
+
+Everything above assumes you are already on that machine. Getting there is a one-time move, and
+three of its steps are easy to get wrong in ways that are not obvious afterwards.
+
+**Clone it. Do not sync it.** The repository is small, but git is unusable inside a synced folder:
+measured on the development machine, `git status` took **4.08 s** against **0.052 s** for the same
+repository outside Dropbox, and `git gc` did not finish in seven minutes. Dropbox watches every
+object git writes, and hands back files that have to be fetched from the cloud before they can be
+read.
+
+```bash
+git clone https://github.com/SEAL-Embedded/Meteor-Shower-Data-Availability.git
+```
+
+**Bring `config.toml` by hand.** It is gitignored, because it names paths that exist on one machine.
+Copy it across rather than recreating it from the example — it carries the instrument definitions,
+the id and vocabulary mappings, and the distance filter, none of which change per machine.
+
+**Copy the AMS cache; do not let it re-fetch.** It is about **5,200 files and 143 MB**, and it is a
+complete 2024 season. Regenerating it means several thousand requests to a volunteer-run site for
+data already collected. Copy the whole directory named by `cache_dir`, then point `cache_dir` at
+wherever it landed:
+
+```
+%LOCALAPPDATA%\meteor-availability\cache\ams
+```
+
+### Then switch the live sources on
+
+Both instrument sources ship disabled with placeholder drive letters. For each of
+`nimbustrace-captures` and `supersid-audio`: set `enabled = true`, and replace `path` with the real
+directories. `path` is a list and the first entry that exists wins, so listing every drive the data
+might be on is deliberate — a machine that mounts it as `E:` and one that mounts it as `D:` can
+share a config.
+
+Check the layout matches what the adapters expect before trusting a run. NimbusTrace wants the
+session folder to carry the completeness suffix (`Data-…_completely_saved/data-….csv`); SuperSID
+wants the timestamp on the folder (`SuperSID-0813T12-03-00/`) and needs `year` set, because those
+folder names carry no year.
+
+### Two things in the config that are wrong for 2026
+
+Fix these while you are in there. Neither announces itself — both produce a plausible record.
+
+**`duration_source = "fixed"` on `supersid-audio` undercounts by about 7%.** It assumes every capture
+is `duration_s = 10`. Running the repository's own WAV reader over the example file gives
+**10.6667 s**. The reader is already correct; the config overrides it. `duration_source` accepts
+`"wav"` — which reads each file's real length — and `"wav"` is the default, so deleting both lines
+is the fix. It costs one file-header read per capture instead of trusting the filename, which is the
+trade the fixed setting was making. A slower scan beats a coverage record that is quietly 7% short.
+
+**`years = [2024]` on the `ams` source.** Add 2026 once 2026 coverage exists, or no 2026 fireball is
+ever correlated. Nothing errors: `[events] within_coverage = true` drops events outside the
+characterised period, so the failure looks exactly like a quiet season.
+
+### Confirm before you publish
+
+```bash
+python run.py check --config config.toml
+```
+
+`check` writes nothing. Read the interval count and characterised range for each instrument against
+a period someone can verify by hand. A wrong `timestamp_format` shows up as far too few intervals,
+or a range in the wrong century — not as an error.
+
+The SuperSID reader has never run against real recordings from this installation. Compare a day you
+can check yourself before publishing anything built from it.
+
 ## Publishing on a schedule
 
 `publish` reads every configured source and writes JSON into `web/data/`. Committing and pushing that
