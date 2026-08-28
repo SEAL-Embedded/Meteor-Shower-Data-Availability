@@ -1,0 +1,586 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-08-28T03:38:04Z",
+  "year": 2026,
+  "coverage": [
+    {
+      "instrument_id": "supersid-seattle",
+      "start": "2026-08-12T01:25:35Z",
+      "end": "2026-08-12T22:04:35Z",
+      "quality": "good",
+      "note": null,
+      "source_id": "supersid-audio"
+    },
+    {
+      "instrument_id": "nimbustrace-seattle",
+      "start": "2026-08-12T01:34:48Z",
+      "end": "2026-08-13T05:34:48Z",
+      "quality": "good",
+      "note": null,
+      "source_id": "nimbustrace-captures"
+    },
+    {
+      "instrument_id": "supersid-seattle",
+      "start": "2026-08-12T22:08:10Z",
+      "end": "2026-08-13T11:58:39Z",
+      "quality": "good",
+      "note": null,
+      "source_id": "supersid-audio"
+    },
+    {
+      "instrument_id": "nimbustrace-seattle",
+      "start": "2026-08-13T05:34:48Z",
+      "end": "2026-08-13T05:49:48Z",
+      "quality": "degraded",
+      "note": null,
+      "source_id": "nimbustrace-captures"
+    },
+    {
+      "instrument_id": "nimbustrace-seattle",
+      "start": "2026-08-13T06:48:27Z",
+      "end": "2026-08-16T22:48:27Z",
+      "quality": "good",
+      "note": null,
+      "source_id": "nimbustrace-captures"
+    },
+    {
+      "instrument_id": "supersid-seattle",
+      "start": "2026-08-13T12:03:00Z",
+      "end": "2026-08-14T05:29:01Z",
+      "quality": "good",
+      "note": null,
+      "source_id": "supersid-audio"
+    },
+    {
+      "instrument_id": "supersid-seattle",
+      "start": "2026-08-14T05:32:05Z",
+      "end": "2026-08-15T01:35:12Z",
+      "quality": "good",
+      "note": null,
+      "source_id": "supersid-audio"
+    },
+    {
+      "instrument_id": "supersid-seattle",
+      "start": "2026-08-15T01:37:50Z",
+      "end": "2026-08-15T18:04:34Z",
+      "quality": "good",
+      "note": null,
+      "source_id": "supersid-audio"
+    },
+    {
+      "instrument_id": "supersid-seattle",
+      "start": "2026-08-15T18:08:05Z",
+      "end": "2026-08-16T10:20:22Z",
+      "quality": "good",
+      "note": null,
+      "source_id": "supersid-audio"
+    },
+    {
+      "instrument_id": "supersid-seattle",
+      "start": "2026-08-16T10:22:20Z",
+      "end": "2026-08-16T23:16:15Z",
+      "quality": "good",
+      "note": null,
+      "source_id": "supersid-audio"
+    },
+    {
+      "instrument_id": "nimbustrace-seattle",
+      "start": "2026-08-16T22:48:27Z",
+      "end": "2026-08-16T23:24:57Z",
+      "quality": "degraded",
+      "note": null,
+      "source_id": "nimbustrace-captures"
+    },
+    {
+      "instrument_id": "supersid-seattle",
+      "start": "2026-08-16T23:25:30Z",
+      "end": "2026-08-17T19:54:41Z",
+      "quality": "good",
+      "note": null,
+      "source_id": "supersid-audio"
+    },
+    {
+      "instrument_id": "nimbustrace-seattle",
+      "start": "2026-08-16T23:26:23Z",
+      "end": "2026-08-16T23:30:03Z",
+      "quality": "good",
+      "note": null,
+      "source_id": "nimbustrace-captures"
+    },
+    {
+      "instrument_id": "nimbustrace-seattle",
+      "start": "2026-08-16T23:30:57Z",
+      "end": "2026-08-18T23:30:57Z",
+      "quality": "good",
+      "note": null,
+      "source_id": "nimbustrace-captures"
+    },
+    {
+      "instrument_id": "supersid-seattle",
+      "start": "2026-08-17T20:05:45Z",
+      "end": "2026-08-18T07:53:44Z",
+      "quality": "good",
+      "note": null,
+      "source_id": "supersid-audio"
+    },
+    {
+      "instrument_id": "supersid-seattle",
+      "start": "2026-08-18T07:55:35Z",
+      "end": "2026-08-18T23:37:03Z",
+      "quality": "good",
+      "note": null,
+      "source_id": "supersid-audio"
+    },
+    {
+      "instrument_id": "nimbustrace-seattle",
+      "start": "2026-08-18T23:39:06Z",
+      "end": "2026-08-19T01:39:06Z",
+      "quality": "good",
+      "note": null,
+      "source_id": "nimbustrace-captures"
+    },
+    {
+      "instrument_id": "supersid-seattle",
+      "start": "2026-08-18T23:39:45Z",
+      "end": "2026-08-19T01:57:31Z",
+      "quality": "good",
+      "note": null,
+      "source_id": "supersid-audio"
+    },
+    {
+      "instrument_id": "nimbustrace-seattle",
+      "start": "2026-08-19T01:39:06Z",
+      "end": "2026-08-19T01:57:46Z",
+      "quality": "degraded",
+      "note": null,
+      "source_id": "nimbustrace-captures"
+    },
+    {
+      "instrument_id": "supersid-seattle",
+      "start": "2026-08-19T03:58:20Z",
+      "end": "2026-08-19T10:20:44Z",
+      "quality": "good",
+      "note": null,
+      "source_id": "supersid-audio"
+    },
+    {
+      "instrument_id": "supersid-seattle",
+      "start": "2026-08-19T10:21:30Z",
+      "end": "2026-08-19T22:23:18Z",
+      "quality": "good",
+      "note": null,
+      "source_id": "supersid-audio"
+    },
+    {
+      "instrument_id": "supersid-seattle",
+      "start": "2026-08-19T22:24:50Z",
+      "end": "2026-08-20T13:12:43Z",
+      "quality": "good",
+      "note": null,
+      "source_id": "supersid-audio"
+    },
+    {
+      "instrument_id": "supersid-seattle",
+      "start": "2026-08-21T01:17:45Z",
+      "end": "2026-08-21T21:07:12Z",
+      "quality": "good",
+      "note": null,
+      "source_id": "supersid-audio"
+    },
+    {
+      "instrument_id": "supersid-seattle",
+      "start": "2026-08-21T21:09:20Z",
+      "end": "2026-08-22T10:29:42Z",
+      "quality": "good",
+      "note": null,
+      "source_id": "supersid-audio"
+    },
+    {
+      "instrument_id": "supersid-seattle",
+      "start": "2026-08-22T10:48:50Z",
+      "end": "2026-08-23T02:17:13Z",
+      "quality": "good",
+      "note": null,
+      "source_id": "supersid-audio"
+    },
+    {
+      "instrument_id": "supersid-seattle",
+      "start": "2026-08-24T22:15:40Z",
+      "end": "2026-08-25T02:13:20Z",
+      "quality": "good",
+      "note": null,
+      "source_id": "supersid-audio"
+    }
+  ],
+  "segments": [
+    {
+      "start": "2026-08-12T01:25:35Z",
+      "end": "2026-08-12T01:34:48Z",
+      "instrument_ids": [
+        "supersid-seattle"
+      ],
+      "degree": 1,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-12T01:34:48Z",
+      "end": "2026-08-12T22:04:35Z",
+      "instrument_ids": [
+        "nimbustrace-seattle",
+        "supersid-seattle"
+      ],
+      "degree": 2,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-12T22:04:35Z",
+      "end": "2026-08-12T22:08:10Z",
+      "instrument_ids": [
+        "nimbustrace-seattle"
+      ],
+      "degree": 1,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-12T22:08:10Z",
+      "end": "2026-08-13T05:34:48Z",
+      "instrument_ids": [
+        "nimbustrace-seattle",
+        "supersid-seattle"
+      ],
+      "degree": 2,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-13T05:34:48Z",
+      "end": "2026-08-13T05:49:48Z",
+      "instrument_ids": [
+        "nimbustrace-seattle",
+        "supersid-seattle"
+      ],
+      "degree": 2,
+      "min_quality": "degraded"
+    },
+    {
+      "start": "2026-08-13T05:49:48Z",
+      "end": "2026-08-13T06:48:27Z",
+      "instrument_ids": [
+        "supersid-seattle"
+      ],
+      "degree": 1,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-13T06:48:27Z",
+      "end": "2026-08-13T11:58:39Z",
+      "instrument_ids": [
+        "nimbustrace-seattle",
+        "supersid-seattle"
+      ],
+      "degree": 2,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-13T11:58:39Z",
+      "end": "2026-08-13T12:03:00Z",
+      "instrument_ids": [
+        "nimbustrace-seattle"
+      ],
+      "degree": 1,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-13T12:03:00Z",
+      "end": "2026-08-14T05:29:01Z",
+      "instrument_ids": [
+        "nimbustrace-seattle",
+        "supersid-seattle"
+      ],
+      "degree": 2,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-14T05:29:01Z",
+      "end": "2026-08-14T05:32:05Z",
+      "instrument_ids": [
+        "nimbustrace-seattle"
+      ],
+      "degree": 1,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-14T05:32:05Z",
+      "end": "2026-08-15T01:35:12Z",
+      "instrument_ids": [
+        "nimbustrace-seattle",
+        "supersid-seattle"
+      ],
+      "degree": 2,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-15T01:35:12Z",
+      "end": "2026-08-15T01:37:50Z",
+      "instrument_ids": [
+        "nimbustrace-seattle"
+      ],
+      "degree": 1,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-15T01:37:50Z",
+      "end": "2026-08-15T18:04:34Z",
+      "instrument_ids": [
+        "nimbustrace-seattle",
+        "supersid-seattle"
+      ],
+      "degree": 2,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-15T18:04:34Z",
+      "end": "2026-08-15T18:08:05Z",
+      "instrument_ids": [
+        "nimbustrace-seattle"
+      ],
+      "degree": 1,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-15T18:08:05Z",
+      "end": "2026-08-16T10:20:22Z",
+      "instrument_ids": [
+        "nimbustrace-seattle",
+        "supersid-seattle"
+      ],
+      "degree": 2,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-16T10:20:22Z",
+      "end": "2026-08-16T10:22:20Z",
+      "instrument_ids": [
+        "nimbustrace-seattle"
+      ],
+      "degree": 1,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-16T10:22:20Z",
+      "end": "2026-08-16T22:48:27Z",
+      "instrument_ids": [
+        "nimbustrace-seattle",
+        "supersid-seattle"
+      ],
+      "degree": 2,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-16T22:48:27Z",
+      "end": "2026-08-16T23:16:15Z",
+      "instrument_ids": [
+        "nimbustrace-seattle",
+        "supersid-seattle"
+      ],
+      "degree": 2,
+      "min_quality": "degraded"
+    },
+    {
+      "start": "2026-08-16T23:16:15Z",
+      "end": "2026-08-16T23:24:57Z",
+      "instrument_ids": [
+        "nimbustrace-seattle"
+      ],
+      "degree": 1,
+      "min_quality": "degraded"
+    },
+    {
+      "start": "2026-08-16T23:25:30Z",
+      "end": "2026-08-16T23:26:23Z",
+      "instrument_ids": [
+        "supersid-seattle"
+      ],
+      "degree": 1,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-16T23:26:23Z",
+      "end": "2026-08-16T23:30:03Z",
+      "instrument_ids": [
+        "nimbustrace-seattle",
+        "supersid-seattle"
+      ],
+      "degree": 2,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-16T23:30:03Z",
+      "end": "2026-08-16T23:30:57Z",
+      "instrument_ids": [
+        "supersid-seattle"
+      ],
+      "degree": 1,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-16T23:30:57Z",
+      "end": "2026-08-17T19:54:41Z",
+      "instrument_ids": [
+        "nimbustrace-seattle",
+        "supersid-seattle"
+      ],
+      "degree": 2,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-17T19:54:41Z",
+      "end": "2026-08-17T20:05:45Z",
+      "instrument_ids": [
+        "nimbustrace-seattle"
+      ],
+      "degree": 1,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-17T20:05:45Z",
+      "end": "2026-08-18T07:53:44Z",
+      "instrument_ids": [
+        "nimbustrace-seattle",
+        "supersid-seattle"
+      ],
+      "degree": 2,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-18T07:53:44Z",
+      "end": "2026-08-18T07:55:35Z",
+      "instrument_ids": [
+        "nimbustrace-seattle"
+      ],
+      "degree": 1,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-18T07:55:35Z",
+      "end": "2026-08-18T23:30:57Z",
+      "instrument_ids": [
+        "nimbustrace-seattle",
+        "supersid-seattle"
+      ],
+      "degree": 2,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-18T23:30:57Z",
+      "end": "2026-08-18T23:37:03Z",
+      "instrument_ids": [
+        "supersid-seattle"
+      ],
+      "degree": 1,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-18T23:39:06Z",
+      "end": "2026-08-18T23:39:45Z",
+      "instrument_ids": [
+        "nimbustrace-seattle"
+      ],
+      "degree": 1,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-18T23:39:45Z",
+      "end": "2026-08-19T01:39:06Z",
+      "instrument_ids": [
+        "nimbustrace-seattle",
+        "supersid-seattle"
+      ],
+      "degree": 2,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-19T01:39:06Z",
+      "end": "2026-08-19T01:57:31Z",
+      "instrument_ids": [
+        "nimbustrace-seattle",
+        "supersid-seattle"
+      ],
+      "degree": 2,
+      "min_quality": "degraded"
+    },
+    {
+      "start": "2026-08-19T01:57:31Z",
+      "end": "2026-08-19T01:57:46Z",
+      "instrument_ids": [
+        "nimbustrace-seattle"
+      ],
+      "degree": 1,
+      "min_quality": "degraded"
+    },
+    {
+      "start": "2026-08-19T03:58:20Z",
+      "end": "2026-08-19T10:20:44Z",
+      "instrument_ids": [
+        "supersid-seattle"
+      ],
+      "degree": 1,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-19T10:21:30Z",
+      "end": "2026-08-19T22:23:18Z",
+      "instrument_ids": [
+        "supersid-seattle"
+      ],
+      "degree": 1,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-19T22:24:50Z",
+      "end": "2026-08-20T13:12:43Z",
+      "instrument_ids": [
+        "supersid-seattle"
+      ],
+      "degree": 1,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-21T01:17:45Z",
+      "end": "2026-08-21T21:07:12Z",
+      "instrument_ids": [
+        "supersid-seattle"
+      ],
+      "degree": 1,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-21T21:09:20Z",
+      "end": "2026-08-22T10:29:42Z",
+      "instrument_ids": [
+        "supersid-seattle"
+      ],
+      "degree": 1,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-22T10:48:50Z",
+      "end": "2026-08-23T02:17:13Z",
+      "instrument_ids": [
+        "supersid-seattle"
+      ],
+      "degree": 1,
+      "min_quality": "good"
+    },
+    {
+      "start": "2026-08-24T22:15:40Z",
+      "end": "2026-08-25T02:13:20Z",
+      "instrument_ids": [
+        "supersid-seattle"
+      ],
+      "degree": 1,
+      "min_quality": "good"
+    }
+  ],
+  "events": [],
+  "event_coverage": []
+}

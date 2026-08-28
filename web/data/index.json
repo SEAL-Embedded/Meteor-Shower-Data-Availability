@@ -1,12 +1,14 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-08-17T07:07:47Z",
+  "generated_at": "2026-08-28T03:38:04Z",
   "range": {
     "start": "2024-07-26T02:02:00Z",
-    "end": "2024-09-09T01:15:00Z"
+    "end": "2026-08-25T02:13:20Z"
   },
   "years": [
-    2024
+    2024,
+    2025,
+    2026
   ],
   "instruments": [
     {
@@ -25,7 +27,10 @@
         "high": 50000.0
       },
       "active": true,
-      "known_range": null
+      "known_range": {
+        "start": "2026-08-12T01:34:48Z",
+        "end": "2026-08-19T01:57:46Z"
+      }
     },
     {
       "id": "supersid-seattle",
@@ -40,7 +45,10 @@
       },
       "band_hz": null,
       "active": true,
-      "known_range": null
+      "known_range": {
+        "start": "2026-08-12T01:25:35Z",
+        "end": "2026-08-25T02:13:20Z"
+      }
     },
     {
       "id": "sphere-vlf-seattle",
@@ -104,9 +112,9 @@
       "kind": "coverage",
       "url": null,
       "attribution": null,
-      "fetched_at": null,
-      "status": "disabled",
-      "detail": "turned off in configuration"
+      "fetched_at": "2026-08-28T03:37:53Z",
+      "status": "stale",
+      "detail": "1 folder(s) carried no completeness marker and were taken as good: Data-2026-08-16T23-26-20; 60203 capture(s)"
     },
     {
       "id": "supersid-audio",
@@ -114,9 +122,9 @@
       "kind": "coverage",
       "url": null,
       "attribution": null,
-      "fetched_at": null,
-      "status": "disabled",
-      "detail": "turned off in configuration"
+      "fetched_at": "2026-08-28T03:37:54Z",
+      "status": "stale",
+      "detail": "1 file(s) skipped: SuperSID-0823T02-19-00: cannot open file ([Errno 13] Permission denied: 'R:\\\\SuperSID\\\\SuperSID-0823T02-19-00\\\\SuperSID-Aug23.wav')"
     },
     {
       "id": "record-2024",
@@ -124,7 +132,7 @@
       "kind": "coverage",
       "url": null,
       "attribution": null,
-      "fetched_at": "2026-08-17T07:07:38Z",
+      "fetched_at": "2026-08-28T03:37:54Z",
       "status": "ok",
       "detail": null
     },
@@ -134,7 +142,7 @@
       "kind": "event",
       "url": "https://fireball.amsmeteors.org/",
       "attribution": "Fireball reports courtesy of the American Meteor Society",
-      "fetched_at": "2026-08-17T07:07:47Z",
+      "fetched_at": "2026-08-28T03:38:04Z",
       "status": "ok",
       "detail": "4 beyond 5000 km; 9 kept with no determinable position; served entirely from cache"
     }
