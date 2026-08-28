@@ -2125,7 +2125,15 @@ class Component extends DCLogic {
       tableRows,
       exportCsv: () => {
         const cols = ['id', 'recordKind', 'instrumentId', 'channel', 'start', 'end', 'validation', 'status', 'lossSeverity', 'clockQuality', 'endBasis', 'publishState', 'disputed', 'provenance', 'label'];
-        const esc = (x) => '"' + String(x == null ? '' : x).replace(/"/g, '""') + '"';
+        // Quoting makes the file valid CSV; it does not stop a spreadsheet evaluating a cell that
+        // opens with =, +, @ or -. Labels here come from a scraped catalogue, and these exports are
+        // opened in the spreadsheet this page replaces, so a leading apostrophe neutralises them.
+        // Plain negative numbers are left alone so they stay numeric.
+        const esc = (x) => {
+          const s = String(x == null ? '' : x);
+          const evaluated = /^[=+@\t\r]/.test(s) || (s.startsWith('-') && !/^-?\d+(\.\d+)?$/.test(s));
+          return '"' + (evaluated ? "'" + s : s).replace(/"/g, '""') + '"';
+        };
         const rows = [`# dataset ${ds.meta.datasetVersion} · scanned ${ds.meta.scanTimestamp} · all times UTC`, cols.join(',')];
         this.records.coverage.concat(this.records.events).forEach((r) => rows.push(cols.map((c) => esc(c === 'start' || c === 'end' ? (r[c] ? new Date(r[c]).toISOString() : '') : r[c])).join(',')));
         this.download('availability.csv', rows.join('\n'), 'text/csv');
