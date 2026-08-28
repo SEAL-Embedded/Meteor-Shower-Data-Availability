@@ -33,3 +33,6 @@ venv/
 build/
 dist/
 .pytest_cache/
+
+
+/cache/
