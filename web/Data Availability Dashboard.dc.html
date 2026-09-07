@@ -264,7 +264,7 @@
     <div class="scroll" style="flex: 1; overflow-y: auto; padding: var(--space-6) var(--space-6) 60px;">
       <div style="display: flex; align-items: baseline; gap: var(--space-4); margin-bottom: var(--space-4); flex-wrap: wrap;">
         <h4 style="margin: 0; font-size: 27px;">Campaign yield</h4>
-        <span class="mono" style="font-size: 16px; color: var(--color-neutral-500);">26 Jul – 9 Sep 2024 · 45 days · {{ recordCountLabel }}</span>
+        <span class="mono" style="font-size: 16px; color: var(--color-neutral-500);">{{ campaignRangeLabel }} · {{ recordCountLabel }}</span>
         <span class="mono" style="font-size: 16px; color: var(--color-accent-300); margin-left: auto;">{{ overlapHeadline }}</span>
       </div>
 
@@ -365,6 +365,19 @@ function fmt(ms, prec) {
   const t = `${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}`;
   if (prec === 'min') return `${day} ${t}`;
   return `${day} ${t}:${p2(d.getUTCSeconds())}`;
+}
+// A record spanning two observing seasons is not well described in days, and "760.0 d" reads as a
+// continuous run rather than two seasons with a gap. Days below a season, years above it.
+function spanLabel(ms) {
+  const days = ms / 864e5;
+  return days < 200 ? `${Math.round(days)} d` : `${(days / 365.25).toFixed(1)} y`;
+}
+function campaignRange(t0, t1) {
+  const a = new Date(+t0), b = new Date(+t1);
+  const d = (x) => `${x.getUTCDate()} ${MON[x.getUTCMonth()]}`;
+  const sameYear = a.getUTCFullYear() === b.getUTCFullYear();
+  const left = sameYear ? d(a) : `${d(a)} ${a.getUTCFullYear()}`;
+  return `${left} – ${d(b)} ${b.getUTCFullYear()} · ${spanLabel(b - a)}`;
 }
 function dur(sec) {
   sec = Math.round(sec);
@@ -806,13 +819,20 @@ class Component extends DCLogic {
     // Shower peaks. Each line now starts just under its own label rather than at a fixed height,
     // so a name is visibly attached to the marker it belongs to. Labels stagger across two tiers
     // so near-coincident peaks stay readable.
-    let lastLabelX = -99, tier = 0;
+    // Two tiers separate peaks a few days apart on a single-season ribbon. Across two seasons the
+    // same peaks fall inside a few pixels, where staggering only alternates which name is on top of
+    // which. A marker still costs nothing, so every peak keeps its line; a name is drawn only where
+    // its tier has room for it, and a shower that loses its label keeps a title for the hover.
+    const tierEnd = [-1e9, -1e9];
     ds.showers.forEach((sh2, i) => {
       const px = x(sh2.peak);
-      tier = px - lastLabelX < 78 ? 1 - tier : 0;
-      lastLabelX = px;
-      const ly = tier ? 24 : 12;
-      kids.push(this.e('line', { key: 'sw' + i, x1: px, y1: ly + 3, x2: px, y2: plotBottom, stroke: sh2.major ? C.accent : C.n700, strokeWidth: sh2.major ? 1.2 : 0.8, strokeDasharray: sh2.major ? '' : '2 2' }));
+      const width = sh2.name.length * 12 * 0.58 + 10;
+      // Prefer the upper tier, then the lower; a peak fits a tier if it clears the last name there.
+      const tier = px > tierEnd[0] ? 0 : px > tierEnd[1] ? 1 : -1;
+      const ly = tier === 1 ? 24 : 12;
+      kids.push(this.e('line', { key: 'sw' + i, x1: px, y1: (tier < 0 ? 12 : ly) + 3, x2: px, y2: plotBottom, stroke: sh2.major ? C.accent : C.n700, strokeWidth: sh2.major ? 1.2 : 0.8, strokeDasharray: sh2.major ? '' : '2 2' }, sh2.name));
+      if (tier < 0) return;
+      tierEnd[tier] = px + width;
       kids.push(this.e('text', { key: 'swt' + i, x: px + 5, y: ly, fontSize: 12, fill: sh2.major ? C.a300 : C.n600 }, sh2.name));
     });
 
@@ -828,11 +848,17 @@ class Component extends DCLogic {
     // so the two orientation frames read alike.
     const axis = this.axisGutter(axisFont, plotBottom + 1);
     const h = plotBottom + 1 + axis.height;
-    for (let t = t0; t <= t1; t += 7 * 24 * H) {
-      const d = new Date(t);
-      kids.push(this.e('text', { key: 'dt' + t, x: x(t), y: axis.baseline, fontSize: axisFont, fill: C.n500, textAnchor: 'middle' },
-        `${d.getUTCDate()} ${MON[d.getUTCMonth()]}`));
-    }
+    // Stepped on the shared ladder rather than a fixed week. At a fixed 7-day stride the ribbon
+    // asked for one label per week of whatever it was showing, which is fine for a single season
+    // and 109 overlapping labels once a second season put two years in the frame.
+    const rt = this.ticks(t0, t1).ticks;
+    const rGap = rt.length > 1 ? Math.abs(x(rt[1].t) - x(rt[0].t)) : W;
+    const rWidest = rt.reduce((m, tk) => Math.max(m, tk.label.length), 0) * axisFont * 0.58;
+    const rEvery = Math.max(1, Math.ceil((rWidest + 12) / Math.max(rGap, 1)));
+    rt.forEach((tk, i) => {
+      if (i % rEvery !== 0) return;
+      kids.push(this.e('text', { key: 'dt' + tk.t, x: x(tk.t), y: axis.baseline, fontSize: axisFont, fill: C.n500, textAnchor: 'middle' }, tk.label));
+    });
 
     return this.e('svg', {
       width: '100%', height: h, viewBox: `0 0 ${L + W + 8} ${h}`, style: { display: 'block', cursor: 'pointer' },
@@ -939,21 +965,46 @@ class Component extends DCLogic {
 
   // ── axis ticks ───────────────────────────────────────────────────────────
   ticks(t0, t1) {
-    const span = t1 - t0;
+    const span = t1 - t0, MAX = 11, out = [];
     const steps = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 2 * 3600, 3 * 3600, 6 * 3600, 12 * 3600, 86400, 2 * 86400, 7 * 86400];
-    let step = steps[steps.length - 1];
-    for (const s of steps) if (span / 1000 / s <= 11) { step = s; break; }
-    const ms = step * 1000, out = [];
-    for (let t = Math.ceil(t0 / ms) * ms; t <= t1; t += ms) {
-      const d = new Date(t);
-      let label;
-      if (step < 60) label = `${p2(d.getUTCMinutes())}:${p2(d.getUTCSeconds())}`;
-      else if (step < 3600) label = `${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}`;
-      else if (step < 86400) label = `${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}`;
-      else label = `${d.getUTCDate()} ${MON[d.getUTCMonth()]}`;
-      out.push({ t, label, major: step < 86400 && d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0 });
+    let step = 0;
+    for (const s of steps) if (span / 1000 / s <= MAX) { step = s; break; }
+
+    if (step) {
+      const ms = step * 1000;
+      for (let t = Math.ceil(t0 / ms) * ms; t <= t1; t += ms) {
+        const d = new Date(t);
+        let label;
+        if (step < 60) label = `${p2(d.getUTCMinutes())}:${p2(d.getUTCSeconds())}`;
+        else if (step < 86400) label = `${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}`;
+        else label = `${d.getUTCDate()} ${MON[d.getUTCMonth()]}`;
+        out.push({ t, label, major: step < 86400 && d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0 });
+      }
+      return { ticks: out, step };
     }
-    return { ticks: out, step };
+
+    // Past a week the ladder has to step on calendar boundaries. A month is not a fixed number of
+    // seconds, so a constant stride drifts and lands ticks on arbitrary dates. The ladder used to
+    // stop at 7 days and fall through to it: across the two-season record that is 109 ticks at
+    // about 11 px apart, every one of them printed over the next.
+    const DAY = 86400e3;
+    const months = [1, 2, 3, 6].find((m) => span / (30.44 * DAY) / m <= MAX);
+    const years = months ? 0 : ([1, 2, 5, 10, 25, 50, 100].find((y) => span / (365.25 * DAY) / y <= MAX) || 100);
+    const stride = months || years;
+    const d = new Date(t0);
+    d.setUTCHours(0, 0, 0, 0);
+    d.setUTCDate(1);
+    // Align to a whole multiple of the stride so panning does not reshuffle which dates are chosen.
+    if (months) d.setUTCMonth(Math.floor(d.getUTCMonth() / stride) * stride);
+    else { d.setUTCMonth(0); d.setUTCFullYear(Math.floor(d.getUTCFullYear() / stride) * stride); }
+    while (d.getTime() <= t1) {
+      const t = d.getTime(), jan = d.getUTCMonth() === 0;
+      // A month tick carries its year only in January, where the year actually turns over. Every
+      // tick carrying it would repeat the same four digits across the whole axis.
+      if (t >= t0) out.push({ t, label: years ? String(d.getUTCFullYear()) : jan ? `Jan ${d.getUTCFullYear()}` : MON[d.getUTCMonth()], major: !!years || jan });
+      if (months) d.setUTCMonth(d.getUTCMonth() + stride); else d.setUTCFullYear(d.getUTCFullYear() + stride);
+    }
+    return { ticks: out, step: (months ? 30.44 : 365.25) * 86400 * stride };
   }
 
   laneRows() {
@@ -999,18 +1050,38 @@ class Component extends DCLogic {
           // Only label a day whose visible slice can hold the label — otherwise a
           // day starting off-screen pins its label to the gutter and overprints
           // the next one.
-          const txt = dayLabel(seg) + (span < 6 * H ? ' 2024' : '');
+          const txt = dayLabel(seg) + (span < 6 * H ? ' ' + new Date(seg).getUTCFullYear() : '');
           if (ex - sx > txt.length * 8.8 + 14) kids.push(this.e('text', { key: 'dt' + seg, x: sx + 6, y: 18, fontSize: 16.5, fill: C.n300, fontWeight: 500 }, txt));
           if (x(seg) > L) kids.push(this.e('line', { key: 'dl' + seg, x1: x(seg), y1: 0, x2: x(seg), y2: 1e4, stroke: C.n800, strokeWidth: 1 }));
         }
         seg = nx;
       }
     } else {
-      kids.push(this.e('text', { key: 'yr', x: L + 5, y: 18, fontSize: 16.5, fill: C.n300 }, '2024'));
+      // Year bands, drawn the way the tier above draws days. This was a hardcoded "2024" that
+      // stayed on screen through every pan and zoom, so it went on asserting 2024 over the 2026
+      // season. Each visible year now labels its own band and stops where the year does.
+      const yd = new Date(t0);
+      yd.setUTCHours(0, 0, 0, 0); yd.setUTCDate(1); yd.setUTCMonth(0);
+      while (yd.getTime() <= t1) {
+        const yr = yd.getUTCFullYear(), segStart = yd.getTime(), next = Date.UTC(yr + 1, 0, 1);
+        const sx = Math.max(L, x(segStart)), ex = Math.min(L + W, x(next));
+        if (ex > L && sx < L + W) {
+          if (ex - sx > 4 * 8.8 + 14) kids.push(this.e('text', { key: 'yr' + yr, x: sx + 6, y: 18, fontSize: 16.5, fill: C.n300, fontWeight: 500 }, String(yr)));
+          if (x(segStart) > L) kids.push(this.e('line', { key: 'yl' + yr, x1: x(segStart), y1: 0, x2: x(segStart), y2: 1e4, stroke: C.n800, strokeWidth: 1 }));
+        }
+        yd.setUTCFullYear(yr + 1);
+      }
     }
+    // Gridlines are cheap and always drawn; labels are not, so they thin out by measured width.
+    // The ladder keeps the tick count near eleven, but a wide label ("Jan 2025") at a narrow plot
+    // width can still collide, and the axis has to stay readable rather than merely be correct.
+    const gap = ticks.length > 1 ? Math.abs(x(ticks[1].t) - x(ticks[0].t)) : W;
+    const widest = ticks.reduce((m, tk) => Math.max(m, tk.label.length), 0) * 14.5 * 0.58;
+    const labelEvery = Math.max(1, Math.ceil((widest + 12) / Math.max(gap, 1)));
     ticks.forEach((tk, i) => {
       const tx = x(tk.t);
       kids.push(this.e('line', { key: 'g' + i, x1: tx, y1: AX - 6, x2: tx, y2: 1e4, stroke: tk.major ? C.n800 : C.n900, strokeWidth: 1 }));
+      if (i % labelEvery !== 0) return;
       // Centred on its tick, the first and last labels overhang the plot by half their width.
       // Nudge those two so the text box stays inside; the rest are unmoved.
       const halfW = tk.label.length * 14.5 * 0.28;
@@ -1407,9 +1478,11 @@ class Component extends DCLogic {
     const TIER = 18, tierFree = [-1e9, -1e9];
     ds.showers.forEach((sh, i) => {
       const px = x(sh.peak);
-      let tier = tierFree.findIndex((edge) => px + 3 >= edge);
-      if (tier < 0) tier = 0;
-      tierFree[tier] = px + 3 + this.textWidth(sh.name, 14) + 10;
+      // No tier with room used to fall back to tier 0, which printed the name over the one
+      // already there. Two seasons in frame put five peaks within a few pixels of each other, so
+      // the fallback fired for most of them. The marker is kept either way; only the name drops.
+      const tier = tierFree.findIndex((edge) => px + 3 >= edge);
+      if (tier >= 0) tierFree[tier] = px + 3 + this.textWidth(sh.name, 14) + 10;
       // Every marker stops at the top of the label block, whatever tier its own name landed on. A
       // line carried down to its own tier crosses each row above it: the α-Capricornids marker,
       // eight units from the δ-Aquariids, ran straight through that label's text. Association is
@@ -1418,10 +1491,19 @@ class Component extends DCLogic {
       // ascender reaches about y - 3.5, so a line ending exactly at y still clipped the top of the
       // text it was pointing at.
       kids.push(this.e('line', { key: 'sw' + i, x1: px, y1: TOP + SKYH, x2: px, y2: y - 5, stroke: sh.major ? C.accent : C.n700, strokeWidth: sh.major ? 1.2 : 0.8, strokeDasharray: sh.major ? '' : '2 2' }));
-      kids.push(this.e('text', { key: 'st' + i, x: px + 3, y: y + 10 + tier * TIER, fontSize: 14, fill: sh.major ? C.a300 : C.n500 }, sh.name));
+      if (tier >= 0) kids.push(this.e('text', { key: 'st' + i, x: px + 3, y: y + 10 + tier * TIER, fontSize: 14, fill: sh.major ? C.a300 : C.n500 }, sh.name));
     });
     y += 38;
-    for (let t = t0; t <= t1; t += 7 * 24 * H) kids.push(this.e('text', { key: 'd' + t, x: x(t), y: y + 10, fontSize: 14, fill: C.n500, textAnchor: 'middle' }, fmt(t, 'day').slice(5)));
+    // Same ladder as the timeline's axes. A fixed week put 109 labels across the two-season
+    // record, each about 11 px from the next.
+    const ct = this.ticks(t0, t1).ticks;
+    const cGap = ct.length > 1 ? Math.abs(x(ct[1].t) - x(ct[0].t)) : W;
+    const cWidest = ct.reduce((m, tk) => Math.max(m, this.textWidth(tk.label, 14)), 0);
+    const cEvery = Math.max(1, Math.ceil((cWidest + 12) / Math.max(cGap, 1)));
+    ct.forEach((tk, i) => {
+      if (i % cEvery !== 0) return;
+      kids.push(this.e('text', { key: 'd' + tk.t, x: x(tk.t), y: y + 10, fontSize: 14, fill: C.n500, textAnchor: 'middle' }, tk.label));
+    });
     y += 16;
     return this.e('svg', {
       width: '100%', height: y, viewBox: `0 0 ${L + W + 10} ${y}`, style: { display: 'block', cursor: 'pointer' },
@@ -1782,7 +1864,7 @@ class Component extends DCLogic {
     }
 
     const crumbLevels = ds ? [
-      { label: 'Campaign · 45 d', span: ds.campaign.end - ds.campaign.start },
+      { label: 'Campaign · ' + spanLabel(ds.campaign.end - ds.campaign.start), span: ds.campaign.end - ds.campaign.start },
       { label: 'Week', span: 7 * 24 * H },
       { label: 'Night · 12 h', span: 12 * H },
       { label: 'Hour', span: H },
@@ -2099,6 +2181,9 @@ class Component extends DCLogic {
       campaignStripEl: v === 'campaign' ? this.campaignStrip() : null,
       matrixEl: v === 'campaign' ? this.matrix() : null,
       matrixLegendEl: v === 'campaign' ? this.matrixLegend() : null,
+      // Both were written into the page as "26 Jul – 9 Sep 2024 · 45 days", which stopped being
+      // true the moment the 2026 season was added: the record now runs 760 days across two seasons.
+      campaignRangeLabel: ds ? campaignRange(ds.campaign.start, ds.campaign.end) : '—',
       recordCountLabel: ds ? `${ds.coverage.length} coverage · ${ds.events.length} events · ${ds.configs.length + ds.interference.length} context` : '',
       statCards: stats,
       matrixModes: [['coverage', 'Coverage'], ['usable', 'Usable only'], ['events', 'Event count']].map(([id, label]) => ({
