@@ -2198,7 +2198,10 @@ class Component extends DCLogic {
             toggle: () => this.setState({ openFacet: open ? null : key }),
             menuStyle: menu(open),
             options: [[anyLabel, 0]].concat(opts).map(([label, value]) => ({
-              label: value ? `${label}   ${countFor(key, value)}` : `${label}   ${countFor(key, 0)}`,
+              // The count in parentheses is how many events that option would leave you with,
+              // measured against whatever the other dropdowns already have selected. A low or zero
+              // count is a fact about today's catalogue, not a broken option.
+              label: `${label} (${countFor(key, value)})`,
               style: item(cur === value),
               pick: () => this.setState({ [stateKey]: value, openFacet: null })
             }))
@@ -2214,10 +2217,11 @@ class Component extends DCLogic {
             'Great-circle distance from the site. Events whose position was never determined always pass \u2014 a missing coordinate is not evidence of distance.'));
         }
         out.push(build('reports', 'Reports', 'evtReports', 'Any number',
-          [['2 or more', 2], ['3 or more', 3], ['5 or more', 5], ['10 or more', 10]],
+          [['2 or more', 2], ['3 or more', 3], ['5 or more', 5], ['9 or more', 9], ['10 or more', 10], ['15 or more', 15]],
           'Minimum independent witness reports. A single-report event rests on one person\u2019s estimate of time, magnitude and duration.'));
         out.push(build('mag', 'Magnitude', 'evtMag', 'Any brightness',
-          [['brighter than \u22124', -4], ['brighter than \u22128', -8], ['brighter than \u221212', -12], ['brighter than \u221217', -17]],
+          [['brighter than \u22124', -4], ['brighter than \u22128', -8], ['brighter than \u221210', -10],
+           ['brighter than \u221212', -12], ['brighter than \u221214', -14], ['brighter than \u221216', -16]],
           'Witness-estimated magnitude; more negative is brighter. Events with no magnitude always pass.'));
         return out;
       })(),
