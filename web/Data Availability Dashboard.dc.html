@@ -84,14 +84,20 @@
     </sc-if>
   </div>
 
-  <div style="display: flex; align-items: baseline; gap: var(--space-3); padding: 4px var(--space-6) 5px; border-bottom: 1px solid var(--color-divider); font-size: 15px; flex: none; flex-wrap: wrap;">
+  <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; inset: 0; z-index: 30;" onClick="{{ closeMenus }}"></div>
+  </sc-if>
+
+  <div style="display: flex; align-items: center; gap: var(--space-3); padding: 5px var(--space-6) 6px; border-bottom: 1px solid var(--color-divider); font-size: 15px; flex: none; flex-wrap: wrap; position: relative; z-index: 31;">
     <span style="color: var(--color-neutral-400); flex: none;">{{ facetLead }}</span>
-    <sc-for list="{{ facets }}" as="f" hint-placeholder-count="2">
-      <div style="display: flex; align-items: baseline; gap: 5px; flex-wrap: wrap;">
-        <span class="mono" style="font-size: 13px; color: var(--color-neutral-500); letter-spacing: .04em;">{{ f.name }}</span>
-        <sc-for list="{{ f.options }}" as="o" hint-placeholder-count="3">
-          <span class="tag" style="{{ o.style }}" onClick="{{ o.pick }}" title="{{ o.title }}">{{ o.label }}</span>
-        </sc-for>
+    <sc-for list="{{ facets }}" as="f" hint-placeholder-count="3">
+      <div style="position: relative; flex: none;">
+        <button type="button" class="btn btn-secondary" style="{{ f.btnStyle }}" onClick="{{ f.toggle }}" title="{{ f.title }}">{{ f.btnLabel }}</button>
+        <div style="{{ f.menuStyle }}">
+          <sc-for list="{{ f.options }}" as="o" hint-placeholder-count="4">
+            <button type="button" style="{{ o.style }}" onClick="{{ o.pick }}">{{ o.label }}</button>
+          </sc-for>
+        </div>
       </div>
     </sc-for>
     <sc-if value="{{ filterOn }}" hint-placeholder-val="{{ true }}">
@@ -422,7 +428,7 @@ class Component extends DCLogic {
     minOverlapMin: null, includeUnd: null, publishedOnly: null,
     matrixMode: 'coverage', query: '', kindFilter: 'all', sortKey: 'start', sortDir: 1,
     // Event facets. 0 means the facet is off; we never narrow the catalogue on the reader's behalf.
-    evtReports: 0, evtDistKm: 0, evtMag: 0,
+    evtReports: 0, evtDistKm: 0, evtMag: 0, openFacet: null,
     pending: {}, newEvt: { time: '', source: 'ams', basis: 'reported_precision', unc: '', label: '' }
   };
 
@@ -2157,37 +2163,61 @@ class Component extends DCLogic {
       filterOn: this.filterOn,
       hiddenLabel: ds ? `${this.allEvents.length - this.records.events.length} hidden by this filter — clear` : '',
       clearFacets: () => this.setState({ evtReports: 0, evtDistKm: 0, evtMag: 0 }),
+      menuOpen: !!this.state.openFacet,
+      closeMenus: () => this.setState({ openFacet: null }),
       facets: !ds ? [] : (() => {
-        const chip = (on) => `font-size: 13.5px;cursor:pointer;${on ? 'background:' + C.a800 + ';color:' + C.a300 + ';' : 'border:1px solid ' + C.n700 + ';color:' + C.n400 + ';'}`;
-        const build = (key, name, stateKey, opts, title) => ({
-          name,
-          options: opts.map(([label, value, tip]) => {
-            const n = this.allEvents.filter((e) => this.eventPasses(e, key) && (!value || (
-              key === 'reports' ? !(e.witnessCount != null && e.witnessCount < value)
-              : key === 'mag' ? !(e.magnitudeValue != null && e.magnitudeValue > value)
-              : (() => { const d = this.eventDistKm(e); return !(d != null && d > value); })()
-            ))).length;
-            return {
-              label: `${label} (${n})`,
-              title: tip || title,
-              style: chip(this.state[stateKey] === value),
-              pick: () => this.setState({ [stateKey]: this.state[stateKey] === value ? 0 : value })
-            };
-          })
-        });
+        const st2 = this.state;
+        // One dropdown per axis, the way a spreadsheet column filter or a shop's facet behaves:
+        // the button says what is in force, the menu lists what you could pick and what each would
+        // leave you with. Counts are computed against the OTHER active facets, so a number never
+        // promises more than the click will actually give.
+        const menu = (open) => `position:absolute;top:calc(100% + 4px);left:0;z-index:40;min-width:186px;`
+          + `display:${open ? 'flex' : 'none'};flex-direction:column;padding:4px;`
+          + `background:var(--color-neutral-900);border:1px solid var(--color-divider);border-radius:6px;`
+          + `box-shadow:0 8px 22px rgba(0,0,0,.28);`;
+        const item = (on) => `text-align:left;font-size:15px;padding:5px 9px;border:0;border-radius:4px;cursor:pointer;`
+          + `white-space:nowrap;font-family:inherit;`
+          + (on ? `background:${C.a800};color:${C.a300};` : `background:transparent;color:${C.n300};`);
+        const btn = (on) => `font-size:15px;padding:2px 9px;white-space:nowrap;`
+          + (on ? `background:${C.a800};color:${C.a300};box-shadow:inset 0 0 0 1px ${C.accent};` : '');
+
+        const countFor = (key, value) => this.allEvents.filter((e) => this.eventPasses(e, key) && (!value || (
+          key === 'reports' ? !(e.witnessCount != null && e.witnessCount < value)
+          : key === 'mag' ? !(e.magnitudeValue != null && e.magnitudeValue > value)
+          : (() => { const d = this.eventDistKm(e); return !(d != null && d > value); })()
+        ))).length;
+
+        const build = (key, name, stateKey, anyLabel, opts, title) => {
+          const cur = st2[stateKey];
+          const chosen = opts.find((o) => o[1] === cur);
+          const open = st2.openFacet === key;
+          return {
+            title,
+            btnLabel: `${name}: ${chosen ? chosen[0] : 'any'} \u25BE`,
+            btnStyle: btn(!!cur),
+            toggle: () => this.setState({ openFacet: open ? null : key }),
+            menuStyle: menu(open),
+            options: [[anyLabel, 0]].concat(opts).map(([label, value]) => ({
+              label: value ? `${label}   ${countFor(key, value)}` : `${label}   ${countFor(key, 0)}`,
+              style: item(cur === value),
+              pick: () => this.setState({ [stateKey]: value, openFacet: null })
+            }))
+          };
+        };
+
         const out = [];
-        // Distance only appears once the dataset carries coordinates. Until the publisher emits
-        // them there is nothing to measure, and a control that cannot act is worse than none.
+        // Range appears only once the dataset carries coordinates. Until the publisher emits them
+        // there is nothing to measure, and a control that cannot act is worse than no control.
         if (this.allEvents.some((e) => e.latitude != null)) {
-          out.push(build('dist', 'WITHIN', 'evtDistKm',
-            [['500 km', 500], ['1000 km', 1000], ['2000 km', 2000], ['3000 km', 3000]],
-            'Great-circle distance from the site. Events with no determined position always pass — a missing coordinate is not evidence of distance.'));
+          out.push(build('dist', 'Range', 'evtDistKm', 'Any distance',
+            [['\u2264 500 km', 500], ['\u2264 1000 km', 1000], ['\u2264 2000 km', 2000], ['\u2264 3000 km', 3000]],
+            'Great-circle distance from the site. Events whose position was never determined always pass \u2014 a missing coordinate is not evidence of distance.'));
         }
-        out.push(build('reports', 'REPORTS', 'evtReports',
-          [['2+', 2], ['3+', 3], ['5+', 5], ['10+', 10]],
+        out.push(build('reports', 'Reports', 'evtReports', 'Any number',
+          [['2 or more', 2], ['3 or more', 3], ['5 or more', 5], ['10 or more', 10]],
           'Minimum independent witness reports. A single-report event rests on one person\u2019s estimate of time, magnitude and duration.'));
-        out.push(build('mag', 'BRIGHTER THAN', 'evtMag',
-          [['\u22124', -4], ['\u22128', -8], ['\u221212', -12], ['\u221217', -17]],
+        out.push(build('mag', 'Magnitude', 'evtMag', 'Any brightness',
+          [['brighter than \u22124', -4], ['brighter than \u22128', -8], ['brighter than \u221212', -12], ['brighter than \u221217', -17]],
           'Witness-estimated magnitude; more negative is brighter. Events with no magnitude always pass.'));
         return out;
       })(),
