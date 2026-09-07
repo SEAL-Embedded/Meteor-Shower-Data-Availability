@@ -153,11 +153,16 @@ years = [2024, 2026]
 min_reports = 1
 countries = ["US", "CA", "MX"]
 
-# Keep only events within reach of the instrument. 5000 km covers North America, Hawaii and
-# Mexico; 3000 km would exclude the eastern United States, and with it most of the 2024 record.
+# Distance filtering belongs to the reader, not to the record. The dashboard offers a distance
+# facet the viewer operates; publishing an already-trimmed catalogue would silently narrow what
+# they are allowed to ask, and undoing it means re-scraping a volunteer-run site.
+#
+# origin_lat/origin_lon are still published as the site position, which is what the dashboard
+# measures distance from. Leave max_distance_km unset to keep every reported event. Setting it
+# drops events at ingest, irreversibly: at 5000 km that was 4 events of 2950.
 origin_lat = 47.6553
 origin_lon = -122.3035
-max_distance_km = 5000
+# max_distance_km = 5000
 
 fetch_details = true
 max_detail_fetches = 500      # per run; 0 uses only what is already cached

@@ -84,6 +84,21 @@
     </sc-if>
   </div>
 
+  <div style="display: flex; align-items: baseline; gap: var(--space-3); padding: 4px var(--space-6) 5px; border-bottom: 1px solid var(--color-divider); font-size: 15px; flex: none; flex-wrap: wrap;">
+    <span style="color: var(--color-neutral-400); flex: none;">{{ facetLead }}</span>
+    <sc-for list="{{ facets }}" as="f" hint-placeholder-count="2">
+      <div style="display: flex; align-items: baseline; gap: 5px; flex-wrap: wrap;">
+        <span class="mono" style="font-size: 13px; color: var(--color-neutral-500); letter-spacing: .04em;">{{ f.name }}</span>
+        <sc-for list="{{ f.options }}" as="o" hint-placeholder-count="3">
+          <span class="tag" style="{{ o.style }}" onClick="{{ o.pick }}" title="{{ o.title }}">{{ o.label }}</span>
+        </sc-for>
+      </div>
+    </sc-for>
+    <sc-if value="{{ filterOn }}" hint-placeholder-val="{{ true }}">
+      <button type="button" class="btn btn-ghost" style="font-size: 15px; padding: 0 6px; margin-left: auto; white-space: nowrap; color: var(--color-accent-300);" onClick="{{ clearFacets }}">{{ hiddenLabel }}</button>
+    </sc-if>
+  </div>
+
   <sc-if value="{{ brokenOpen }}" hint-placeholder-val="{{ false }}">
     <div style="display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); padding: 5px var(--space-6); border-bottom: 1px solid var(--color-divider); font-size: 16px; flex: none; background: var(--color-neutral-900); color: var(--color-neutral-400);">
       <sc-for list="{{ brokenList }}" as="b" hint-placeholder-count="3">
@@ -406,6 +421,8 @@ class Component extends DCLogic {
     plotH: 460, expanded: {}, hoverId: null, selId: null, manage: false, greyscale: false,
     minOverlapMin: null, includeUnd: null, publishedOnly: null,
     matrixMode: 'coverage', query: '', kindFilter: 'all', sortKey: 'start', sortDir: 1,
+    // Event facets. 0 means the facet is off; we never narrow the catalogue on the reader's behalf.
+    evtReports: 0, evtDistKm: 0, evtMag: 0,
     pending: {}, newEvt: { time: '', source: 'ams', basis: 'reported_precision', unc: '', label: '' }
   };
 
@@ -563,10 +580,50 @@ class Component extends DCLogic {
   }
 
   // ── records, with local edits applied ─────────────────────────────────────
+  // Great-circle distance from the site to an event, or null when the event has no position.
+  eventDistKm(e) {
+    const site = this.state.ds && this.state.ds.site;
+    if (!site || e.latitude == null || e.longitude == null) return null;
+    const R = 6371.0088, r = (d) => d * Math.PI / 180;
+    const dLat = r(e.latitude - site.lat), dLon = r(e.longitude - site.lon);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(r(site.lat)) * Math.cos(r(e.latitude)) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
+  }
+  // Three-valued per axis: pass, fail, or undetermined — and undetermined passes. An event with no
+  // position is not evidence of distance, and 8 of the 2024 catalogue lack both a position and a
+  // magnitude, so a plain `d <= km && mag <= m` would drop them twice over and silently.
+  eventPasses(e, skip) {
+    const st = this.state;
+    if (skip !== 'reports' && st.evtReports && e.witnessCount != null && e.witnessCount < st.evtReports) return false;
+    if (skip !== 'mag' && st.evtMag && e.magnitudeValue != null && e.magnitudeValue > st.evtMag) return false;
+    if (skip !== 'dist' && st.evtDistKm) {
+      const d = this.eventDistKm(e);
+      if (d != null && d > st.evtDistKm) return false;
+    }
+    return true;
+  }
+  get filterOn() { const s = this.state; return !!(s.evtReports || s.evtDistKm || s.evtMag); }
+  get filterLabel() {
+    const s = this.state, p = [];
+    if (s.evtDistKm) p.push(`within ${s.evtDistKm} km`);
+    if (s.evtReports) p.push(`${s.evtReports}+ reports`);
+    if (s.evtMag) p.push(`brighter than ${s.evtMag}`);
+    return p.length ? p.join(' and ') : 'no filter applied';
+  }
+  // The whole catalogue, whatever the facets say. Exports and by-id lookups read this, because a
+  // filter is a way of looking and must not become a way of losing.
+  get allEvents() {
+    const ds = this.state.ds;
+    if (!ds) return [];
+    const pend = this.state.pending;
+    const apply = (r) => (pend[r.id] ? Object.assign({}, r, pend[r.id], { _edited: true }) : r);
+    return ds.events.map(apply).concat(Object.keys(pend).filter((k) => pend[k]._added && pend[k].recordKind === 'event').map((k) => pend[k]));
+  }
   get records() {
     const ds = this.state.ds;
     if (!ds) return { coverage: [], events: [] };
-    const key = (this._pv || 0) + '|' + ds.meta.datasetVersion;
+    const key = (this._pv || 0) + '|' + ds.meta.datasetVersion
+      + '|' + this.state.evtReports + '|' + this.state.evtDistKm + '|' + this.state.evtMag;
     if (this._recKey === key) return this._recCache;
     const pend = this.state.pending;
     const apply = (r) => (pend[r.id] ? Object.assign({}, r, pend[r.id], { _edited: true }) : r);
@@ -577,7 +634,7 @@ class Component extends DCLogic {
     this._ovKey = null;
     this._recCache = {
       coverage: ds.coverage.map(apply),
-      events: ds.events.map(apply).concat(added.filter((a) => a.recordKind === 'event'))
+      events: ds.events.map(apply).concat(added.filter((a) => a.recordKind === 'event')).filter((e) => this.eventPasses(e))
     };
     return this._recCache;
   }
@@ -1750,7 +1807,10 @@ class Component extends DCLogic {
   get selected() {
     const id = this.state.hoverId || this.state.selId;
     if (!id || !this.state.ds) return null;
-    const all = this.records.coverage.concat(this.records.events, this.state.ds.configs, this.state.ds.interference);
+    // allEvents, not records.events: selecting an event by id — from a search, a deep link, or a
+    // click that survived a facet change — has to find it even when the facets exclude it. A filter
+    // that hides the answer to "was anything recording at 05:45" is worse than one that shows too much.
+    const all = this.records.coverage.concat(this.allEvents, this.state.ds.configs, this.state.ds.interference);
     return all.find((r) => r.id === id) || null;
   }
   download(name, text, mime) {
@@ -2090,6 +2150,47 @@ class Component extends DCLogic {
       // The provenance banner reads from the dataset rather than being written into the page.
       // Hardcoded, it claimed SYNTHETIC over real records — the one thing this banner exists to
       // get right, and the failure would be invisible because it looks exactly like the truth.
+      // Event facets. Cumulative options, each labelled with what it keeps, counted against the
+      // OTHER active facets so the numbers stay true as selections stack. Everything is off until
+      // the reader turns it on: the published catalogue is every reported event.
+      facetLead: !ds ? 'Events' : (this.filterOn ? `Showing ${this.records.events.length} of ${this.allEvents.length} reported events:` : `Showing all ${this.allEvents.length} reported events:`),
+      filterOn: this.filterOn,
+      hiddenLabel: ds ? `${this.allEvents.length - this.records.events.length} hidden by this filter — clear` : '',
+      clearFacets: () => this.setState({ evtReports: 0, evtDistKm: 0, evtMag: 0 }),
+      facets: !ds ? [] : (() => {
+        const chip = (on) => `font-size: 13.5px;cursor:pointer;${on ? 'background:' + C.a800 + ';color:' + C.a300 + ';' : 'border:1px solid ' + C.n700 + ';color:' + C.n400 + ';'}`;
+        const build = (key, name, stateKey, opts, title) => ({
+          name,
+          options: opts.map(([label, value, tip]) => {
+            const n = this.allEvents.filter((e) => this.eventPasses(e, key) && (!value || (
+              key === 'reports' ? !(e.witnessCount != null && e.witnessCount < value)
+              : key === 'mag' ? !(e.magnitudeValue != null && e.magnitudeValue > value)
+              : (() => { const d = this.eventDistKm(e); return !(d != null && d > value); })()
+            ))).length;
+            return {
+              label: `${label} (${n})`,
+              title: tip || title,
+              style: chip(this.state[stateKey] === value),
+              pick: () => this.setState({ [stateKey]: this.state[stateKey] === value ? 0 : value })
+            };
+          })
+        });
+        const out = [];
+        // Distance only appears once the dataset carries coordinates. Until the publisher emits
+        // them there is nothing to measure, and a control that cannot act is worse than none.
+        if (this.allEvents.some((e) => e.latitude != null)) {
+          out.push(build('dist', 'WITHIN', 'evtDistKm',
+            [['500 km', 500], ['1000 km', 1000], ['2000 km', 2000], ['3000 km', 3000]],
+            'Great-circle distance from the site. Events with no determined position always pass — a missing coordinate is not evidence of distance.'));
+        }
+        out.push(build('reports', 'REPORTS', 'evtReports',
+          [['2+', 2], ['3+', 3], ['5+', 5], ['10+', 10]],
+          'Minimum independent witness reports. A single-report event rests on one person\u2019s estimate of time, magnitude and duration.'));
+        out.push(build('mag', 'BRIGHTER THAN', 'evtMag',
+          [['\u22124', -4], ['\u22128', -8], ['\u221212', -12], ['\u221217', -17]],
+          'Witness-estimated magnitude; more negative is brighter. Events with no magnitude always pass.'));
+        return out;
+      })(),
       provenanceTag: !ds ? 'LOADING' : ds.meta.provenance === 'synthetic' ? 'SYNTHETIC' : 'MEASURED',
       provenanceNote: !ds
         ? 'Loading the record…'
@@ -2217,7 +2318,10 @@ class Component extends DCLogic {
       })),
       tableRows,
       exportCsv: () => {
-        const cols = ['id', 'recordKind', 'instrumentId', 'channel', 'start', 'end', 'validation', 'status', 'lossSeverity', 'clockQuality', 'endBasis', 'publishState', 'disputed', 'provenance', 'label'];
+        // Every record, filtered or not, with a column saying which. Exporting only the view would
+        // hand someone a file indistinguishable from the catalogue, and it outlives the session that
+        // made it.
+        const cols = ['id', 'recordKind', 'instrumentId', 'channel', 'start', 'end', 'validation', 'status', 'lossSeverity', 'clockQuality', 'endBasis', 'publishState', 'disputed', 'provenance', 'passesFilter', 'label'];
         // Quoting makes the file valid CSV; it does not stop a spreadsheet evaluating a cell that
         // opens with =, +, @ or -. Labels here come from a scraped catalogue, and these exports are
         // opened in the spreadsheet this page replaces, so a leading apostrophe neutralises them.
@@ -2227,11 +2331,24 @@ class Component extends DCLogic {
           const evaluated = /^[=+@\t\r]/.test(s) || (s.startsWith('-') && !/^-?\d+(\.\d+)?$/.test(s));
           return '"' + (evaluated ? "'" + s : s).replace(/"/g, '""') + '"';
         };
-        const rows = [`# dataset ${ds.meta.datasetVersion} · scanned ${ds.meta.scanTimestamp} · all times UTC`, cols.join(',')];
-        this.records.coverage.concat(this.records.events).forEach((r) => rows.push(cols.map((c) => esc(c === 'start' || c === 'end' ? (r[c] ? new Date(r[c]).toISOString() : '') : r[c])).join(',')));
+        const rows = [
+          `# dataset ${ds.meta.datasetVersion} · scanned ${ds.meta.scanTimestamp} · all times UTC`,
+          `# every record is present; passesFilter records the view in force at export — ${this.filterLabel}`,
+          cols.join(',')
+        ];
+        this.records.coverage.concat(this.allEvents).forEach((r) => rows.push(cols.map((c) => {
+          if (c === 'passesFilter') return r.recordKind === 'event' ? String(this.eventPasses(r)) : '';
+          return esc(c === 'start' || c === 'end' ? (r[c] ? new Date(r[c]).toISOString() : '') : r[c]);
+        }).map((v, i) => (cols[i] === 'passesFilter' ? esc(v) : v)).join(',')));
         this.download('availability.csv', rows.join('\n'), 'text/csv');
       },
-      exportJson: () => this.download('availability.json', JSON.stringify({ meta: ds.meta, site: ds.site, coverage: this.records.coverage, events: this.records.events, configs: ds.configs, interference: ds.interference, excluded: ds.broken }, null, 2), 'application/json')
+      exportJson: () => this.download('availability.json', JSON.stringify({
+        meta: Object.assign({}, ds.meta, { eventFilter: { reports: st.evtReports || null, maxDistanceKm: st.evtDistKm || null, brighterThan: st.evtMag || null, describes: this.filterLabel } }),
+        site: ds.site,
+        coverage: this.records.coverage,
+        events: this.allEvents.map((e) => Object.assign({}, e, { passesFilter: this.eventPasses(e) })),
+        configs: ds.configs, interference: ds.interference, excluded: ds.broken
+      }, null, 2), 'application/json')
     };
   }
 }

@@ -112,6 +112,10 @@ const evt = (o) => Object.assign({
   uncertaintyBasis: 'unknown', uncertaintySec: null, uncertaintyLowSec: null, uncertaintyHighSec: null,
   eventDurationSec: null, durationBinLowSec: null, durationBinHighSec: null,
   magnitudeValue: null, magnitudeBasis: null, eventLocation: '', eventVehicle: '', eventRefId: '',
+  // Coordinates arrive only once the publisher emits them. Absent means the position was never
+  // determined, so the distance facet has nothing to measure and hides itself rather than
+  // pretending every event sits at the site.
+  latitude: null, longitude: null, positionBasis: null,
   witnessCount: null, disputed: false, disputeNote: '', publishState: 'draft',
   referenceUrl: '', label: '', provenance: 'synthetic', confoundWindowSec: null
 }, o);

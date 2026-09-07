@@ -367,6 +367,11 @@ def _event(event: Event, config: "CampaignConfig") -> dict[str, Any]:
         payload["witnessCount"] = event.witness_count
     if event.location and event.location.label:
         payload["eventLocation"] = event.location.label
+    # Coordinates travel to the dashboard so the reader can filter on distance. They were dropped
+    # here before, which left the dashboard with a location it could print but not measure.
+    if event.location and event.location.latitude is not None:
+        payload["latitude"] = event.location.latitude
+        payload["longitude"] = event.location.longitude
     if event.source_ref:
         payload["eventRefId"] = event.source_ref
     if event.url:
