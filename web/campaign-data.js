@@ -33,18 +33,25 @@ export const DATASET_META = {
   sourceNote: 'Real cases quoted from the 2024 “Big Sheet”; all other density is invented.'
 };
 
+// The Sphere VLF antenna is the instrument now called NimbusTrace. The 2024 records keep the name
+// the season sheet used, because that is what the sheet said and the record should not be rewritten
+// under it; the page resolves the old id onto the new one so the two seasons read as one instrument
+// with a continuous history rather than as two instruments that were never up at the same time.
+export const FORMER_IDS = { sphere_antenna: 'nimbustrace' };
+const alias = (r) => (FORMER_IDS[r.instrumentId] ? { ...r, instrumentId: FORMER_IDS[r.instrumentId] } : r);
+
+// Listed in the order they are shown. Order is a presentation decision, so it is made here rather
+// than inherited from whatever order the publisher happened to emit.
 export const INSTRUMENTS = [
-  { id: 'sphere_antenna', name: 'Sphere VLF Antenna', short: 'Sphere VLF', modality: 'radio',
-    channels: [{ id: 'ch0', label: 'ch0' }, { id: 'ch1', label: 'ch1' }] },
+  { id: 'nimbustrace', name: 'NimbusTrace VLF Receiver', short: 'NimbusTrace', formerly: 'Sphere VLF',
+    modality: 'radio', channels: [{ id: 'ch0', label: 'ch0' }, { id: 'ch1', label: 'ch1' }] },
+  { id: 'supersid', name: 'SuperSID', short: 'SuperSID', modality: 'radio',
+    channels: [{ id: 'nlk', label: 'NLK 24.8 kHz' }] },
   { id: 'magnetometer', name: 'Vectaire Magnetometer', short: 'Magnetometer', modality: 'field',
     note: 'relative field, not absolute',
     channels: [{ id: 'x', label: 'X' }, { id: 'y', label: 'Y' }, { id: 'z', label: 'Z' }] },
   { id: 'skycam', name: 'Sky Camera', short: 'Sky Camera', modality: 'optical', cadenceSec: 30,
-    channels: [{ id: 'all_sky', label: 'all-sky' }] },
-  { id: 'supersid', name: 'SuperSID', short: 'SuperSID', modality: 'radio',
-    channels: [{ id: 'nlk', label: 'NLK 24.8 kHz' }] },
-  { id: 'nimbustrace', name: 'NimbusTrace', short: 'NimbusTrace', modality: 'radio',
-    channels: [{ id: 'ch0', label: 'ch0' }] }
+    channels: [{ id: 'all_sky', label: 'all-sky' }] }
 ];
 
 export const SHOWERS = [
@@ -400,8 +407,11 @@ export function buildDataset() {
   coverage.sort((a, b) => a.start - b.start);
   events.sort((a, b) => a.start - b.start);
 
+  // The synthetic records were written when the antenna was still called Sphere VLF. Aliasing on
+  // the way out keeps this path identical to the generated one rather than restating the rename in
+  // fifteen record literals.
   return { meta: DATASET_META, site: SITE, campaign: CAMPAIGN, instruments: INSTRUMENTS,
-    showers: SHOWERS, coverage, events, configs, interference, broken };
+    showers: SHOWERS, coverage: coverage.map(alias), events, configs, interference, broken };
 }
 
 // ── real data ────────────────────────────────────────────────────────────────
@@ -445,7 +455,9 @@ export async function loadDataset(url = DATASET_URL) {
     return true;
   };
 
-  const coverage = (raw.coverage ?? []).map((r) => cov(r))
+  // Aliased before the check below, which validates instrumentId against the instrument list:
+  // sphere_antenna is no longer in it, so an unaliased record would be excluded as unknown.
+  const coverage = (raw.coverage ?? []).map((r) => alias(cov(r)))
     .filter((r) => drawable(r, true)).sort((a, b) => a.start - b.start);
   const events = (raw.events ?? []).map((r) => evt(r))
     .filter((r) => drawable(r, false)).sort((a, b) => a.start - b.start);
@@ -474,7 +486,8 @@ export async function loadDataset(url = DATASET_URL) {
 // generated file names instruments and this module keeps their channels.
 function mergeInstruments(generated) {
   if (!generated?.length) return INSTRUMENTS;
-  return generated.map((instrument) => {
+  const rank = (id) => { const i = INSTRUMENTS.findIndex((x) => x.id === id); return i < 0 ? 99 : i; };
+  return generated.filter((instrument) => !FORMER_IDS[instrument.id]).sort((a, b) => rank(a.id) - rank(b.id)).map((instrument) => {
     const known = INSTRUMENTS.find((i) => i.id === instrument.id);
     return {
       ...known,

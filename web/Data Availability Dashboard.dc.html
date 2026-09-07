@@ -1129,8 +1129,16 @@ class Component extends DCLogic {
       // right, in the same gutter. SVG text neither wraps nor ellipsises, so a long instrument
       // name just runs underneath the channel name. Reserve the channel label's room and clip.
       const reserved = row.kind === 'chan' ? this.textWidth(row.ch.label, 14.5) + 12 : 0;
-      const name = this.fitText(rawName, L - 8 - reserved, nameSize);
-      kids.push(this.e('text', { key: 'ln' + ri, x: 0, y: ry + rh / 2 + 5.6, fontSize: nameSize, fill: row.kind === 'inst' ? C.n300 : C.n400, style: { cursor: 'pointer' } }, name));
+      // An instrument that was renamed carries the old name under the new one: the two seasons are
+      // one instrument, and a reader who knows the 2024 record as Sphere VLF has to be able to find
+      // it. The gutter is 198px and a lane row is 28, so "NimbusTrace (formerly Sphere VLF)" fits on
+      // neither one line nor two at full size; the name gives up three points to make room for it.
+      const former = row.first && row.kind === 'inst' ? row.inst.formerly : '';
+      const twoLine = !!former && rh >= 26;
+      const size = twoLine ? nameSize - 3 : nameSize;
+      const name = this.fitText(rawName, L - 8 - reserved, size);
+      kids.push(this.e('text', { key: 'ln' + ri, x: 0, y: ry + rh / 2 + (twoLine ? -2 : 5.6), fontSize: size, fill: row.kind === 'inst' ? C.n300 : C.n400, style: { cursor: 'pointer' } }, name));
+      if (twoLine) kids.push(this.e('text', { key: 'lf' + ri, x: 0, y: ry + rh / 2 + 11, fontSize: 11.5, fill: C.n600, style: { cursor: 'pointer' } }, this.fitText('formerly ' + former, L - 8, 11.5)));
       if (row.kind === 'chan') {
         kids.push(this.e('text', { key: 'lc' + ri, x: L - 8, y: ry + rh / 2 + 5.6, fontSize: 14.5, fill: C.n500, textAnchor: 'end' }, row.ch.label));
       }
