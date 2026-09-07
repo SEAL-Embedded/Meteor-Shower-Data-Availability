@@ -94,9 +94,14 @@
       <div style="position: relative; flex: none;">
         <button type="button" class="btn btn-secondary" style="{{ f.btnStyle }}" onClick="{{ f.toggle }}" title="{{ f.title }}">{{ f.btnLabel }}</button>
         <div style="{{ f.menuStyle }}">
+          <span style="{{ f.noteStyle }}">{{ f.note }}</span>
           <sc-for list="{{ f.options }}" as="o" hint-placeholder-count="4">
             <button type="button" style="{{ o.style }}" onClick="{{ o.pick }}">{{ o.label }}</button>
           </sc-for>
+          <div style="display: flex; gap: 5px; align-items: center; padding: 6px 6px 3px; margin-top: 3px; border-top: 1px solid var(--color-divider);">
+            <input type="number" value="{{ f.draft }}" onChange="{{ f.onDraft }}" placeholder="{{ f.placeholder }}" aria-label="{{ f.inputLabel }}" style="width: 104px; font-size: 14px; padding: 3px 7px; border-radius: 4px; border: 1px solid var(--color-divider); background: transparent; color: var(--color-neutral-300); font-family: inherit;">
+            <button type="button" style="{{ f.setStyle }}" onClick="{{ f.applyDraft }}">Set</button>
+          </div>
         </div>
       </div>
     </sc-for>
@@ -428,7 +433,7 @@ class Component extends DCLogic {
     minOverlapMin: null, includeUnd: null, publishedOnly: null,
     matrixMode: 'coverage', query: '', kindFilter: 'all', sortKey: 'start', sortDir: 1,
     // Event facets. 0 means the facet is off; we never narrow the catalogue on the reader's behalf.
-    evtReports: 0, evtDistKm: 0, evtMag: 0, openFacet: null,
+    evtReports: 0, evtDistKm: 0, evtMag: 0, openFacet: null, facetDraft: {},
     pending: {}, newEvt: { time: '', source: 'ams', basis: 'reported_precision', unc: '', label: '' }
   };
 
@@ -2187,16 +2192,40 @@ class Component extends DCLogic {
           : (() => { const d = this.eventDistKm(e); return !(d != null && d > value); })()
         ))).length;
 
-        const build = (key, name, stateKey, anyLabel, opts, title) => {
+        // A step list covers the common questions; the typed field covers the one the steps
+        // missed. Both write the same state, so a custom value shows on the button face the same
+        // way a picked one does.
+        const shape = {
+          dist: { norm: (v) => Math.max(1, Math.round(v)), label: (v) => `\u2264 ${v} km`, ph: 'km', aria: 'Maximum distance in kilometres' },
+          reports: { norm: (v) => Math.max(1, Math.round(v)), label: (v) => `${v} or more`, ph: 'reports', aria: 'Minimum number of reports' },
+          // Typed as 10 or as -10, the reader means the same thing: brighter than magnitude -10.
+          mag: { norm: (v) => -Math.abs(v), label: (v) => `brighter than \u2212${Math.abs(v)}`, ph: 'magnitude', aria: 'Brighter than this magnitude' }
+        };
+
+        const build = (key, name, stateKey, anyLabel, opts, title, note) => {
           const cur = st2[stateKey];
           const chosen = opts.find((o) => o[1] === cur);
           const open = st2.openFacet === key;
+          const sh = shape[key];
+          const draft = st2.facetDraft[key] == null ? '' : st2.facetDraft[key];
           return {
             title,
-            btnLabel: `${name}: ${chosen ? chosen[0] : 'any'} \u25BE`,
+            note: note || '',
+            noteStyle: `display:${note ? 'block' : 'none'};padding:4px 9px 6px;font-size:13.5px;line-height:1.35;color:${C.n500};max-width:200px;`,
+            btnLabel: `${name}: ${chosen ? chosen[0] : cur ? sh.label(cur) : 'any'} \u25BE`,
             btnStyle: btn(!!cur),
             toggle: () => this.setState({ openFacet: open ? null : key }),
             menuStyle: menu(open),
+            placeholder: sh.ph,
+            inputLabel: sh.aria,
+            draft,
+            onDraft: (e) => this.setState({ facetDraft: Object.assign({}, st2.facetDraft, { [key]: e.target.value }) }),
+            setStyle: `font-size:14px;padding:3px 9px;border:0;border-radius:4px;cursor:pointer;font-family:inherit;background:${C.a800};color:${C.a300};`,
+            applyDraft: () => {
+              const v = parseFloat(draft);
+              if (!isFinite(v)) return;
+              this.setState({ [stateKey]: sh.norm(v), openFacet: null });
+            },
             options: [[anyLabel, 0]].concat(opts).map(([label, value]) => ({
               // The count in parentheses is how many events that option would leave you with,
               // measured against whatever the other dropdowns already have selected. A low or zero
@@ -2209,13 +2238,14 @@ class Component extends DCLogic {
         };
 
         const out = [];
-        // Range appears only once the dataset carries coordinates. Until the publisher emits them
-        // there is nothing to measure, and a control that cannot act is worse than no control.
-        if (this.allEvents.some((e) => e.latitude != null)) {
-          out.push(build('dist', 'Range', 'evtDistKm', 'Any distance',
-            [['\u2264 500 km', 500], ['\u2264 1000 km', 1000], ['\u2264 2000 km', 2000], ['\u2264 3000 km', 3000]],
-            'Great-circle distance from the site. Events whose position was never determined always pass \u2014 a missing coordinate is not evidence of distance.'));
-        }
+        // Range is always offered. It used to hide itself when the dataset carried no coordinates,
+        // which made a planned control look like a missing one; instead it says why it cannot
+        // narrow anything yet, and every count reads the full catalogue, which is the truth.
+        const positioned = this.allEvents.filter((e) => e.latitude != null).length;
+        out.push(build('dist', 'Range', 'evtDistKm', 'Any distance',
+          [['\u2264 500 km', 500], ['\u2264 1000 km', 1000], ['\u2264 2000 km', 2000], ['\u2264 3000 km', 3000]],
+          'Great-circle distance from the site. Events whose position was never determined always pass \u2014 a missing coordinate is not evidence of distance.',
+          positioned ? '' : 'No event in this dataset carries a position yet, so this cannot narrow anything. It works as soon as the publisher emits coordinates.'));
         out.push(build('reports', 'Reports', 'evtReports', 'Any number',
           [['2 or more', 2], ['3 or more', 3], ['5 or more', 5], ['9 or more', 9], ['10 or more', 10], ['15 or more', 15]],
           'Minimum independent witness reports. A single-report event rests on one person\u2019s estimate of time, magnitude and duration.'));
