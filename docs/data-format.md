@@ -130,9 +130,15 @@ sorted by `start`, then `instrument_id`.
   "end": "2024-07-27T18:51:00Z",
   "quality": "good",
   "note": null,
-  "source_id": "nimbustrace-files"
+  "source_id": "nimbustrace-files",
+  "check_method": null
 }
 ```
+
+`check_method` is how this interval was established, when its source knows — `archive_scan` from
+the archive index, for instance. `null` means the source did not say, and the publisher's default
+stands. It is carried per interval rather than per source because one file holds two seasons that
+were established two different ways.
 
 `quality` is one of:
 
@@ -272,6 +278,18 @@ Two rules hold in that translation, and both exist to stop a value being invente
   one of the scanner's methods. An earlier version reported `unchecked` on the grounds that no
   scanner had run; because the dashboard draws unchecked coverage as a hollow outline, that made a
   fully characterised season look like one nobody had examined.
+- **A source that knows how it checked says so.** `checkMethod` is `operator_log` only where nothing
+  better is known. A source that walked the recordings reports its own — the archive index reports
+  `archive_scan` — so a reader weighing a number can tell a walk over the files from somebody's
+  notes about them. The two seasons in this record were established differently and should not read
+  as though they were established the same way.
+- **A timebase is published only where it has been measured.** `clockQuality` — `disciplined`,
+  `free_running`, `unsynced`, `unknown` — comes from the instrument's `clock` block in the config,
+  and is omitted entirely for an instrument that has no such block, which the dashboard reads as
+  `unknown`. That distinction is load-bearing: the overlap filter has a control that drops
+  undisciplined clocks, so asserting a quality nobody established would move a headline figure on
+  no evidence. `clockNote` carries the measurement itself, because the word alone does not separate
+  a clock good to 0.1 ppm from one gaining a quarter of a second an hour — both are `free_running`.
 
 `campaign` is the period the instruments were characterised over, not the period events are known
 for — a year of catalogue events must not stretch a 45-night observing run across the whole calendar.

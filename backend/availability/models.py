@@ -212,6 +212,31 @@ class Band:
         return {"low": self.low, "high": self.high}
 
 
+@dataclass(frozen=True)
+class Clock:
+    """What is known about an instrument's timebase, and how well it is known.
+
+    Absent means nobody has measured it, which is not the same as "fine". The distinction decides
+    whether two instruments' overlapping coverage can be used for cross-instrument timing at all,
+    so it is carried on the instrument rather than inferred from the fact that timestamps exist.
+
+    ``quality`` is the dashboard's vocabulary: ``disciplined`` for a clock steered by an external
+    reference, ``free_running`` for one that is not, ``unsynced`` for one whose epoch is not
+    trusted at all, ``unknown`` for one nobody has characterised.
+    """
+
+    quality: str = "unknown"
+    note: str | None = None
+    """The measurement behind ``quality``, in the units it was measured in.
+
+    A reader deciding whether to correlate two records needs the number, not the word: "free
+    running" covers both a clock 0.1 ppm off and one gaining a quarter of a second an hour.
+    """
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"quality": self.quality, "note": self.note}
+
+
 @dataclass
 class Instrument:
     id: str
@@ -220,6 +245,7 @@ class Instrument:
     system: str
     site: Site | None = None
     band_hz: Band | None = None
+    clock: Clock | None = None
     active: bool = True
     known_range: Span | None = None
     """The period over which this instrument's availability has been characterised.
@@ -236,6 +262,7 @@ class Instrument:
             "system": self.system,
             "site": self.site.to_dict() if self.site else None,
             "band_hz": self.band_hz.to_dict() if self.band_hz else None,
+            "clock": self.clock.to_dict() if self.clock else None,
             "active": self.active,
             "known_range": self.known_range.to_dict() if self.known_range else None,
         }
@@ -273,6 +300,13 @@ class CoverageInterval:
     quality: Quality = Quality.GOOD
     note: str | None = None
     source_id: str | None = None
+    check_method: str | None = None
+    """How this interval was checked, when the source knows.
+
+    A season sheet an operator kept and a walk over the archive folders are both checks, but they
+    are not the same check, and a reader weighing a number needs to know which one produced it.
+    ``None`` leaves the publisher's default in place rather than asserting a method.
+    """
 
     def __post_init__(self) -> None:
         self.start = ensure_utc(self.start)
@@ -298,6 +332,7 @@ class CoverageInterval:
             quality=self.quality,
             note=self.note,
             source_id=self.source_id,
+            check_method=self.check_method,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -308,6 +343,7 @@ class CoverageInterval:
             "quality": self.quality.value,
             "note": self.note,
             "source_id": self.source_id,
+            "check_method": self.check_method,
         }
 
 

@@ -22,7 +22,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from ..models import CoverageInterval, Event, EventKind, Instrument, Quality, Span
+from ..models import Clock, CoverageInterval, Event, EventKind, Instrument, Quality, Span
 from .corrections import apply_to as apply_corrections
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -42,7 +42,10 @@ _QUALITY = {
     Quality.LOST: ("invalid", "corrupt", "major"),
 }
 
-#: How the check was made. Not one of the scanner's methods, because no scanner ran.
+#: How the check was made, for a source that does not say. The season sheet is the case this was
+#: written for: an operator watched the instruments and wrote down where data was lost. A source
+#: that does know says so per interval -- the archive scan reports ``archive_scan`` -- and a
+#: reader can then tell a walk over the files from a person's notes about them.
 CHECK_METHOD = "operator_log"
 
 _EVENT_CLASS = {
@@ -69,6 +72,7 @@ def campaign_payload(store: "Store", config: "CampaignConfig") -> dict[str, Any]
     # The campaign is the period the instruments were characterised over, not the period events
     # are known for. A year of catalogue events would otherwise stretch a 45-night observing run
     # across the whole calendar and make the dashboard's ribbon meaningless.
+    clocks = _clocks(store)
     payload: dict[str, Any] = {
         "meta": _meta(store, config),
         "site": _site(store, config),
@@ -76,7 +80,7 @@ def campaign_payload(store: "Store", config: "CampaignConfig") -> dict[str, Any]
         "instruments": [_instrument(i, config) for i in store.instruments],
         "coverage": [
             record
-            for record in (_coverage(c, config) for c in store.coverage)
+            for record in (_coverage(c, config, clocks) for c in store.coverage)
             if record is not None
         ],
         "events": [_event(e, config) for e in store.events],
@@ -151,7 +155,15 @@ def _instrument(instrument: Instrument, config: "CampaignConfig") -> dict[str, A
     }
 
 
-def _coverage(record: CoverageInterval, config: "CampaignConfig") -> dict[str, Any] | None:
+def _clocks(store: "Store") -> dict[str, Clock]:
+    return {i.id: i.clock for i in store.instruments if i.clock is not None}
+
+
+def _coverage(
+    record: CoverageInterval,
+    config: "CampaignConfig",
+    clocks: dict[str, Clock] | None = None,
+) -> dict[str, Any] | None:
     validation, status, loss = _QUALITY[record.quality]
     note = record.note or ""
     payload: dict[str, Any] = {
@@ -161,12 +173,24 @@ def _coverage(record: CoverageInterval, config: "CampaignConfig") -> dict[str, A
         "start": milliseconds(record.start),
         "end": milliseconds(record.end),
         "validation": validation,
-        "checkMethod": CHECK_METHOD,
+        "checkMethod": record.check_method or CHECK_METHOD,
         "status": status,
         "lossSeverity": loss,
         "timeScale": "utc",
         "provenance": config.provenance_for(record.source_id),
     }
+    publish_state = config.publish_state_for(record.source_id)
+    if publish_state is not None:
+        payload["publishState"] = publish_state
+    # Only where the timebase has actually been characterised. Left off, the dashboard reads the
+    # record as "unknown", which is the truth about an instrument nobody has measured -- and the
+    # overlap filter treats a measured free-running clock and an unmeasured one differently, so
+    # asserting one here that nobody established would change a headline number on no evidence.
+    clock = (clocks or {}).get(record.instrument_id)
+    if clock is not None:
+        payload["clockQuality"] = clock.quality
+        if clock.note:
+            payload["clockNote"] = clock.note
     if note:
         payload["label"] = note
         if "recover" in note.lower():
@@ -352,6 +376,9 @@ def _event(event: Event, config: "CampaignConfig") -> dict[str, Any]:
         "start": milliseconds(event.time),
         "provenance": config.provenance_for(event.source_id),
     }
+    publish_state = config.publish_state_for(event.source_id)
+    if publish_state is not None:
+        payload["publishState"] = publish_state
     if event.end_time is not None:
         payload["eventEnd"] = milliseconds(event.end_time)
     if event.time_uncertainty_s is not None:

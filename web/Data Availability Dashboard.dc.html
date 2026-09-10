@@ -1858,7 +1858,11 @@ class Component extends DCLogic {
       rows.push({ label: 'end', value: r.ongoing ? 'ongoing at scan time' : fmt(r.end, 'sec') + ' UTC' });
       rows.push({ label: 'duration', value: dur((r.end - r.start) / 1000) });
       rows.push({ label: 'end basis', value: r.endBasis + (r.endUncertaintySec ? ` (lower bound, ±${dur(r.endUncertaintySec)})` : '') });
-      rows.push({ label: 'clock', value: r.clockQuality + ' · scale ' + r.timeScale });
+      // The word alone does not separate a clock measured at 0.1 ppm from one gaining a
+      // quarter of a second an hour, and both publish as 'free_running'. Where the record
+      // carries the measurement, show it: this row is what the overlap filter's
+      // undisciplined-clocks control is asking the reader to judge.
+      rows.push({ label: 'clock', value: r.clockQuality + ' · scale ' + r.timeScale + (r.clockNote ? ' — ' + r.clockNote : '') });
       rows.push({ label: 'integrity', value: `${r.status} · checked by ${r.checkMethod}` });
       if (r.lossSeverity !== 'none') {
         const q = r.lossQuantity ? `${r.lossQuantity} ${r.lossUnit}` : '—';

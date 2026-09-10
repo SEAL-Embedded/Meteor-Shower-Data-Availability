@@ -34,6 +34,29 @@ def total_duration_s(spans: Iterable[Span]) -> float:
     return sum(s.duration_s for s in merge(spans))
 
 
+def subtract(target: Span, holes: Iterable[Span]) -> list[Span]:
+    """What is left of *target* once every span in *holes* is taken out of it.
+
+    Used to partition a run of recordings by quality without double-counting the time: the union
+    of the run is cut where the degraded parts sit, so the pieces tile it exactly rather than
+    overlapping wherever two sessions did.
+    """
+    remaining = [target]
+    for hole in merge(holes):
+        cut: list[Span] = []
+        for piece in remaining:
+            overlap = piece.intersection(hole)
+            if overlap is None or overlap.is_instant:
+                cut.append(piece)
+                continue
+            if overlap.start > piece.start:
+                cut.append(Span(piece.start, overlap.start))
+            if overlap.end < piece.end:
+                cut.append(Span(overlap.end, piece.end))
+        remaining = cut
+    return [piece for piece in remaining if not piece.is_instant]
+
+
 def covers_fully(spans: Iterable[Span], target: Span) -> bool:
     """True when the union of *spans* leaves no gap inside *target*."""
     candidates = list(spans)

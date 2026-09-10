@@ -7,6 +7,7 @@ from availability.core.intervals import (
     coalesce,
     covers_fully,
     merge,
+    subtract,
     sweep,
     total_duration_s,
 )
@@ -68,6 +69,32 @@ class TestMerge:
 
     def test_overlap_is_counted_once(self):
         assert total_duration_s([span(0, 2), span(1, 3)]) == 3 * 3600
+
+
+class TestSubtract:
+    def test_a_hole_in_the_middle_leaves_two_pieces(self):
+        assert subtract(span(0, 10), [span(4, 6)]) == [span(0, 4), span(6, 10)]
+
+    def test_a_hole_at_an_edge_leaves_one(self):
+        assert subtract(span(0, 10), [span(0, 4)]) == [span(4, 10)]
+
+    def test_overlapping_holes_are_one_hole(self):
+        assert subtract(span(0, 10), [span(2, 5), span(4, 7)]) == [span(0, 2), span(7, 10)]
+
+    def test_a_hole_covering_everything_leaves_nothing(self):
+        assert subtract(span(2, 4), [span(0, 10)]) == []
+
+    def test_a_hole_outside_the_target_changes_nothing(self):
+        assert subtract(span(0, 2), [span(5, 6)]) == [span(0, 2)]
+
+    def test_a_hole_touching_only_the_boundary_changes_nothing(self):
+        assert subtract(span(0, 2), [span(2, 3)]) == [span(0, 2)]
+
+    def test_the_pieces_and_the_holes_add_back_up_to_the_target(self):
+        target, holes = span(0, 10), [span(1, 2), span(4, 7)]
+        kept = sum(piece.duration_s for piece in subtract(target, holes))
+        removed = sum(piece.duration_s for piece in merge(holes))
+        assert kept + removed == target.duration_s
 
 
 class TestCoversFully:
