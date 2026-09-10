@@ -145,6 +145,12 @@ class AmsFireballAdapter(Adapter):
     def __init__(self, config, source_config) -> None:
         super().__init__(config, source_config)
         self._options: dict[str, str] | None = None
+        self._expired: list[str] = []
+        """Pages served from a cache that had passed its lifetime, because the fetch failed.
+
+        A catalogue that is down must not be able to empty the record. Kept per run so the source
+        can report that it is serving yesterday's answer rather than today's.
+        """
 
     def fetch(self) -> EventResult:
         events: list[Event] = []
@@ -198,11 +204,20 @@ class AmsFireballAdapter(Adapter):
             f"{requests_made} request(s) made" if requests_made else "served entirely from cache"
         )
 
+        if self._expired:
+            notes.insert(
+                0,
+                f"{len(self._expired)} page(s) served from an expired cache because the "
+                f"catalogue was unreachable ({self._expired[0]})",
+            )
+
         if not events and problems:
             return SourceStatus.ERROR, "; ".join(problems[:3])
         if problems:
             summary = f"{len(problems)} problem(s): " + "; ".join(problems[:3])
             return SourceStatus.STALE, "; ".join([summary, *notes])
+        if self._expired:
+            return SourceStatus.STALE, "; ".join(notes)
         return SourceStatus.OK, "; ".join(notes) or None
 
     # -- configuration ---------------------------------------------------------------------
@@ -436,7 +451,27 @@ class AmsFireballAdapter(Adapter):
         if self._is_fresh(cache_file, max_age_s):
             return cache_file.read_text(encoding="utf-8"), 0
 
-        html = self._request(url, query_factory(), label)
+        # Once the catalogue has refused one request, stop asking it about pages we can already
+        # answer from disk. A season is a hundred-odd listing pages; retrying every one of them
+        # against a site that is down turns a failed run into several minutes of sleeping between
+        # requests that cannot succeed, and aims all of it at a volunteer-run server having a bad
+        # day. Pages with nothing cached are still attempted -- those are the ones a run needs.
+        if self._expired and cache_file.is_file():
+            self._expired.append(f"{label}: not retried, the catalogue is already down")
+            return cache_file.read_text(encoding="utf-8"), 0
+
+        try:
+            html = self._request(url, query_factory(), label)
+        except AmsRequestError as exc:
+            # An expired copy beats nothing at all. Without this, an hour of the catalogue being
+            # unreachable is enough to publish a record with no events in it -- every fireball the
+            # season was measured against silently gone, and the coverage left standing beside a
+            # blank sky. The page is stale, so the run says so rather than reporting a clean fetch.
+            if not cache_file.is_file():
+                raise
+            self._expired.append(str(exc))
+            return cache_file.read_text(encoding="utf-8"), 0
+
         cache_file.parent.mkdir(parents=True, exist_ok=True)
         cache_file.write_text(html, encoding="utf-8")
         return html, 1

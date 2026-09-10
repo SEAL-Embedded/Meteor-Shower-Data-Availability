@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-08-28T03:38:04Z",
+  "generated_at": "2026-09-10T21:04:06Z",
   "range": {
     "start": "2024-07-26T02:02:00Z",
     "end": "2026-08-25T02:13:20Z"
@@ -26,10 +26,14 @@
         "low": 0.0,
         "high": 50000.0
       },
+      "clock": {
+        "quality": "free_running",
+        "note": "+73.3 ± 0.4 ppm fast (MSK-squaring on NLK and NPM; +61…+73 ppm against GOES GLM). Timestamps gain 0.26 s/h; per-block offset up to ~1 s."
+      },
       "active": true,
       "known_range": {
-        "start": "2026-08-12T01:34:48Z",
-        "end": "2026-08-19T01:57:46Z"
+        "start": "2026-08-12T01:34:45Z",
+        "end": "2026-08-25T02:13:02Z"
       }
     },
     {
@@ -44,6 +48,10 @@
         "longitude": -122.3035
       },
       "band_hz": null,
+      "clock": {
+        "quality": "free_running",
+        "note": "Host clock free-running, but the sample rate is exact to < 0.1 ppm and the file epoch was checked against UTC to ± 30 s using grid-frequency wander shared with NimbusTrace."
+      },
       "active": true,
       "known_range": {
         "start": "2026-08-12T01:25:35Z",
@@ -62,6 +70,7 @@
         "longitude": -122.3035
       },
       "band_hz": null,
+      "clock": null,
       "active": false,
       "known_range": {
         "start": "2024-07-26T23:40:00Z",
@@ -80,6 +89,7 @@
         "longitude": -122.3035
       },
       "band_hz": null,
+      "clock": null,
       "active": false,
       "known_range": {
         "start": "2024-08-13T19:25:00Z",
@@ -98,6 +108,7 @@
         "longitude": -122.3035
       },
       "band_hz": null,
+      "clock": null,
       "active": false,
       "known_range": {
         "start": "2024-07-26T02:02:00Z",
@@ -107,14 +118,24 @@
   ],
   "sources": [
     {
+      "id": "archive-2026",
+      "name": "2026 archive scan",
+      "kind": "coverage",
+      "url": null,
+      "attribution": null,
+      "fetched_at": "2026-09-10T21:03:54Z",
+      "status": "ok",
+      "detail": "nimbustrace-seattle: 147 session(s) -> 11 interval(s), 285.52 h over a 312.64 h span (91.3% duty); 0.01 h of session overlap counted once; 1.53 h degraded; supersid-seattle: 21 session(s) -> 20 interval(s), 297.20 h over a 312.80 h span (95.0% duty); 11.94 h of session overlap counted once"
+    },
+    {
       "id": "nimbustrace-captures",
       "name": "NimbusTrace captures",
       "kind": "coverage",
       "url": null,
       "attribution": null,
-      "fetched_at": "2026-08-28T03:37:53Z",
-      "status": "stale",
-      "detail": "1 folder(s) carried no completeness marker and were taken as good: Data-2026-08-16T23-26-20; 60203 capture(s)"
+      "fetched_at": null,
+      "status": "disabled",
+      "detail": "turned off in configuration"
     },
     {
       "id": "supersid-audio",
@@ -122,9 +143,9 @@
       "kind": "coverage",
       "url": null,
       "attribution": null,
-      "fetched_at": "2026-08-28T03:37:54Z",
-      "status": "stale",
-      "detail": "1 file(s) skipped: SuperSID-0823T02-19-00: cannot open file ([Errno 13] Permission denied: 'R:\\\\SuperSID\\\\SuperSID-0823T02-19-00\\\\SuperSID-Aug23.wav')"
+      "fetched_at": null,
+      "status": "disabled",
+      "detail": "turned off in configuration"
     },
     {
       "id": "record-2024",
@@ -132,7 +153,7 @@
       "kind": "coverage",
       "url": null,
       "attribution": null,
-      "fetched_at": "2026-08-28T03:37:54Z",
+      "fetched_at": "2026-09-10T21:03:54Z",
       "status": "ok",
       "detail": null
     },
@@ -142,9 +163,9 @@
       "kind": "event",
       "url": "https://fireball.amsmeteors.org/",
       "attribution": "Fireball reports courtesy of the American Meteor Society",
-      "fetched_at": "2026-08-28T03:38:04Z",
-      "status": "ok",
-      "detail": "4 beyond 5000 km; 9 kept with no determinable position; served entirely from cache"
+      "fetched_at": "2026-09-10T21:04:06Z",
+      "status": "stale",
+      "detail": "107 page(s) served from an expired cache because the catalogue was unreachable (2024 US page 1: HTTP 503); 4 beyond 5000 km; 9 kept with no determinable position; served entirely from cache"
     }
   ]
 }

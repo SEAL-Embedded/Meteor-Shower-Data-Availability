@@ -6,6 +6,7 @@ its module here; nothing else in the codebase needs to know it exists.
 
 from . import (  # noqa: F401  (importing these registers the adapters)
     ams,
+    archive_sessions,
     catalogues,
     csv_files,
     csv_timeseries,

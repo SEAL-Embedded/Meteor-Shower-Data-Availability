@@ -20,6 +20,10 @@ enabled = false
 # Beside the dashboard's own folder, because the dashboard fetches it relative to itself.
 path = "web/data/campaign.json"
 site_altitude_m = 45
+# Printed in the dashboard header, so it has to describe the run that produced the file. Name the
+# path per season when they differ -- a season that was scanned and one that was transcribed off a
+# sheet are not the same claim, and one line saying "none" over both hides the better of the two.
+scanner_version = "archive scan of coverage_intervals.csv (2026); season sheet (2024)"
 
 [campaign.instrument_ids]
 "sphere-vlf-seattle" = "sphere_antenna"
@@ -31,6 +35,18 @@ site_altitude_m = 45
 [campaign.provenance]
 "record-2024" = "sheet_2024"
 "ams" = "ams_scrape"
+
+# How far each source's records have been cleared for citation. Omit a source and its records
+# publish with no publishState at all, which the dashboard reads as `draft`.
+#
+# Values: draft, publishable, published. A source not listed here keeps the dashboard default.
+# Nothing is marked `published` here on purpose: that is the dashboard's own sign-off, made in
+# manage mode against records somebody has actually read, and the "published only" view is what
+# it gates. Setting it from a config file would make that sign-off automatic, which is the one
+# thing it must not be.
+[campaign.publish_state]
+"archive-2026" = "publishable"
+"record-2024" = "publishable"
 
 [api]
 # Origins allowed to call the live API from a browser. Empty means no cross-origin access at all,
@@ -52,6 +68,13 @@ system = "nimbustrace"
 active = true
 band_hz = { low = 0, high = 50000 }
 site = { id = "seattle", name = "Seattle, Washington", latitude = 47.6553, longitude = -122.3035 }
+# What is known about the timebase, and how well. Omit it and every interval publishes as
+# "unknown", which is the honest answer for a clock nobody has measured -- and the wrong one for a
+# clock that has been. The dashboard's overlap filter has a control that drops undisciplined
+# clocks, so this decides a headline number; `note` carries the measurement, because "free
+# running" alone covers both 0.1 ppm and a quarter of a second an hour.
+# quality: disciplined | free_running | unsynced | unknown
+clock = { quality = "free_running", note = "+73.3 ± 0.4 ppm fast (MSK-squaring on NLK and NPM). Timestamps gain 0.26 s/h." }
 
 [[instruments]]
 id = "supersid-seattle"
@@ -72,6 +95,29 @@ site = { id = "seattle", name = "Seattle, Washington", latitude = 47.6553, longi
 # ---------------------------------------------------------------------------------------------
 # Coverage sources
 # ---------------------------------------------------------------------------------------------
+
+# A finished season, from an index of the archive: one row per recording folder, written by
+# whatever walked the archive. Columns: instrument, folder, start_utc, end_utc, duration_s, note.
+#
+# Prefer this to a live scan once a season is over. The index is small and portable where the
+# recordings are neither, sessions are unioned rather than summed so overlapping recordings cannot
+# inflate the total, and a re-publish reproduces the season exactly instead of depending on which
+# machine ran it. Do not enable it alongside a live scan of the same recordings: the same time
+# would be counted twice, once from the files and once from the index.
+[[sources]]
+id = "archive-2026"
+adapter = "archive_sessions"
+kind = "coverage"
+name = "2026 archive scan"
+enabled = false
+path = ["R:/imo_fireball/coverage_intervals.csv"]
+instruments = { NimbusTrace = "nimbustrace-seattle", SuperSID = "supersid-seattle" }
+# The note a clean session carries, per instrument. Anything else counts as coverage but is marked
+# degraded. Stated as the good value rather than a list of bad ones, so a marker nobody
+# anticipated reads as suspect instead of passing silently as whole data.
+clean_note = { NimbusTrace = "completely", SuperSID = "96000Hz/1ch" }
+# Optional: ignore rows outside this year, so one index can serve a season.
+season = 2026
 
 # A hand-maintained record. Use this to backfill history, and to correct anything the automated
 # scans get wrong. Columns: instrument_id, start, end, quality, note.

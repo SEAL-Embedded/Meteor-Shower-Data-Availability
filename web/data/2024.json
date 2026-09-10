@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-08-28T03:38:04Z",
+  "generated_at": "2026-09-10T21:04:06Z",
   "year": 2024,
   "coverage": [
     {
@@ -9,7 +9,8 @@
       "end": "2024-07-26T02:18:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -17,7 +18,8 @@
       "end": "2024-07-27T18:51:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sky-camera-seattle",
@@ -25,7 +27,8 @@
       "end": "2024-07-27T05:00:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sky-camera-seattle",
@@ -33,7 +36,8 @@
       "end": "2024-07-27T06:00:00Z",
       "quality": "degraded",
       "note": "Last half hour Data lost",
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sky-camera-seattle",
@@ -41,7 +45,8 @@
       "end": "2024-07-27T06:13:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sky-camera-seattle",
@@ -49,7 +54,8 @@
       "end": "2024-07-28T06:00:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -57,7 +63,8 @@
       "end": "2024-07-29T00:00:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sky-camera-seattle",
@@ -65,7 +72,8 @@
       "end": "2024-07-28T07:00:00Z",
       "quality": "degraded",
       "note": "Minor data lost",
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sky-camera-seattle",
@@ -73,7 +81,8 @@
       "end": "2024-07-28T07:22:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -81,7 +90,8 @@
       "end": "2024-07-29T01:00:00Z",
       "quality": "degraded",
       "note": "Minor Data Lost Can be Recovered",
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -89,7 +99,8 @@
       "end": "2024-07-29T03:58:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sky-camera-seattle",
@@ -97,7 +108,8 @@
       "end": "2024-07-29T07:19:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -105,7 +117,8 @@
       "end": "2024-07-29T11:00:00Z",
       "quality": "lost",
       "note": "Start: 10:03 Major Data Lost",
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -113,7 +126,8 @@
       "end": "2024-07-29T12:00:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -121,7 +135,8 @@
       "end": "2024-07-29T13:00:00Z",
       "quality": "degraded",
       "note": "Minor Data Lost Can be Recovered",
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -129,7 +144,8 @@
       "end": "2024-07-29T14:00:00Z",
       "quality": "degraded",
       "note": "Minor Data Lost Can be Recovered",
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -137,7 +153,8 @@
       "end": "2024-07-29T15:00:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -145,7 +162,8 @@
       "end": "2024-07-29T16:00:00Z",
       "quality": "degraded",
       "note": "Minor Data Lost Can be Recovered",
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -153,7 +171,8 @@
       "end": "2024-07-30T01:24:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -161,7 +180,8 @@
       "end": "2024-07-31T10:42:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -169,7 +189,8 @@
       "end": "2024-08-02T17:10:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -177,7 +198,8 @@
       "end": "2024-08-03T21:28:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -185,7 +207,8 @@
       "end": "2024-08-06T10:58:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -193,7 +216,8 @@
       "end": "2024-08-06T14:23:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -201,7 +225,8 @@
       "end": "2024-08-06T17:23:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -209,7 +234,8 @@
       "end": "2024-08-08T01:13:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -217,7 +243,8 @@
       "end": "2024-08-08T19:22:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -225,7 +252,8 @@
       "end": "2024-08-08T22:53:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -233,7 +261,8 @@
       "end": "2024-08-10T23:25:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -241,7 +270,8 @@
       "end": "2024-08-12T13:29:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -249,7 +279,8 @@
       "end": "2024-08-13T20:25:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "vectaire-magnetometer-seattle",
@@ -257,7 +288,8 @@
       "end": "2024-08-16T15:19:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -265,7 +297,8 @@
       "end": "2024-08-14T01:20:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -273,7 +306,8 @@
       "end": "2024-08-14T10:09:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -281,7 +315,8 @@
       "end": "2024-08-16T23:59:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sky-camera-seattle",
@@ -289,7 +324,8 @@
       "end": "2024-08-15T09:34:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sky-camera-seattle",
@@ -297,7 +333,8 @@
       "end": "2024-08-16T09:35:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "vectaire-magnetometer-seattle",
@@ -305,7 +342,8 @@
       "end": "2024-08-21T15:13:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -313,7 +351,8 @@
       "end": "2024-08-20T13:58:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -321,7 +360,8 @@
       "end": "2024-08-23T14:10:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "vectaire-magnetometer-seattle",
@@ -329,7 +369,8 @@
       "end": "2024-08-26T16:38:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sky-camera-seattle",
@@ -337,7 +378,8 @@
       "end": "2024-08-22T09:45:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sky-camera-seattle",
@@ -345,7 +387,8 @@
       "end": "2024-08-23T09:47:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sky-camera-seattle",
@@ -353,7 +396,8 @@
       "end": "2024-08-24T09:49:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -361,7 +405,8 @@
       "end": "2024-08-24T23:35:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -369,7 +414,8 @@
       "end": "2024-08-25T15:02:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sky-camera-seattle",
@@ -377,7 +423,8 @@
       "end": "2024-08-25T09:51:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -385,7 +432,8 @@
       "end": "2024-08-26T00:59:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -393,7 +441,8 @@
       "end": "2024-08-27T16:13:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "vectaire-magnetometer-seattle",
@@ -401,7 +450,8 @@
       "end": "2024-09-05T15:29:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -409,7 +459,8 @@
       "end": "2024-08-27T20:37:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -417,7 +468,8 @@
       "end": "2024-08-29T08:35:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -425,7 +477,8 @@
       "end": "2024-08-31T13:08:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -433,7 +486,8 @@
       "end": "2024-09-03T06:38:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sky-camera-seattle",
@@ -441,7 +495,8 @@
       "end": "2024-09-03T13:10:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -449,7 +504,8 @@
       "end": "2024-09-07T13:14:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sky-camera-seattle",
@@ -457,7 +513,8 @@
       "end": "2024-09-04T13:59:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sky-camera-seattle",
@@ -465,7 +522,8 @@
       "end": "2024-09-05T10:58:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sky-camera-seattle",
@@ -473,7 +531,8 @@
       "end": "2024-09-06T10:05:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sky-camera-seattle",
@@ -481,7 +540,8 @@
       "end": "2024-09-07T09:59:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sphere-vlf-seattle",
@@ -489,7 +549,8 @@
       "end": "2024-09-09T01:15:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     },
     {
       "instrument_id": "sky-camera-seattle",
@@ -497,7 +558,8 @@
       "end": "2024-09-08T11:56:00Z",
       "quality": "good",
       "note": null,
-      "source_id": "record-2024"
+      "source_id": "record-2024",
+      "check_method": null
     }
   ],
   "segments": [

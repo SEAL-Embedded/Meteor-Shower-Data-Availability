@@ -102,7 +102,7 @@ const cov = (o) => Object.assign({
   recordKind: 'coverage', id: '', instrumentId: '', channel: '', start: 0, end: 0,
   ongoing: false, validation: 'unchecked', status: 'unknown', checkMethod: 'none',
   lossSeverity: 'none', lossRecoverable: null, lossQuantity: null, lossUnit: null, lossDurationSec: null,
-  endBasis: 'observed', endUncertaintySec: 0, clockQuality: 'unknown', timeScale: 'utc',
+  endBasis: 'observed', endUncertaintySec: 0, clockQuality: 'unknown', clockNote: '', timeScale: 'utc',
   publishState: 'draft', disputed: false, disputeNote: '', processingResultUrl: '', processingConclusion: '',
   referenceUrl: '', label: '', enteredBy: '', provenance: 'synthetic'
 }, o);

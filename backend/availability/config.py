@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .models import Band, Instrument, InstrumentKind, Site, SourceKind
+from .models import Band, Clock, Instrument, InstrumentKind, Site, SourceKind
 
 DEFAULT_CONFIG_NAME = "config.toml"
 
@@ -49,6 +49,14 @@ class CampaignConfig:
     instrument_ids: dict[str, str] = field(default_factory=dict)
     provenance: dict[str, str] = field(default_factory=dict)
     event_sources: dict[str, str] = field(default_factory=dict)
+    publish_state: dict[str, str] = field(default_factory=dict)
+    """Per source, how far its records have been cleared for citation.
+
+    Unset means the field is not published at all, and the dashboard's own default -- ``draft`` --
+    stands. That is deliberate: how far a record has been reviewed is a judgement somebody makes,
+    not a property of the scan, so it has to be stated here rather than assumed from the fact that
+    a source ran cleanly.
+    """
 
     def export_id(self, instrument_id: str) -> str:
         return self.instrument_ids.get(instrument_id, instrument_id)
@@ -58,6 +66,9 @@ class CampaignConfig:
 
     def event_source_for(self, source_id: str | None) -> str:
         return self.event_sources.get(source_id or "", source_id or "unknown")
+
+    def publish_state_for(self, source_id: str | None) -> str | None:
+        return self.publish_state.get(source_id or "")
 
 
 @dataclass
@@ -156,6 +167,7 @@ def _instrument(entry: dict[str, Any]) -> Instrument:
 
     site_entry = entry.get("site")
     band_entry = entry.get("band_hz")
+    clock_entry = entry.get("clock")
     return Instrument(
         id=entry["id"],
         name=entry["name"],
@@ -174,6 +186,16 @@ def _instrument(entry: dict[str, Any]) -> Instrument:
         band_hz=(
             Band(low=float(band_entry["low"]), high=float(band_entry["high"]))
             if band_entry
+            else None
+        ),
+        # Absent on purpose when it is absent from the file: an unmeasured timebase publishes as
+        # "unknown", never as the reassuring default it would be so easy to make it.
+        clock=(
+            Clock(
+                quality=str(clock_entry.get("quality", "unknown")),
+                note=clock_entry.get("note"),
+            )
+            if clock_entry
             else None
         ),
         active=bool(entry.get("active", True)),
@@ -207,8 +229,20 @@ def _source(entry: dict[str, Any]) -> SourceConfig:
     )
 
 
+#: What the dashboard accepts in ``publishState``. A typo here would publish a record into a state
+#: nothing counts, so it is refused at load rather than discovered as a tile reading zero.
+PUBLISH_STATES = ("draft", "publishable", "published")
+
+
 def _campaign(entry: dict[str, Any]) -> CampaignConfig:
     defaults = CampaignConfig()
+    publish_state = dict(entry.get("publish_state", {}))
+    for source_id, state in publish_state.items():
+        if state not in PUBLISH_STATES:
+            raise ConfigError(
+                f"campaign.publish_state for {source_id!r} is {state!r}; "
+                f"expected one of {list(PUBLISH_STATES)}"
+            )
     return CampaignConfig(
         enabled=bool(entry.get("enabled", False)),
         path=Path(entry.get("path", defaults.path)),
@@ -218,6 +252,7 @@ def _campaign(entry: dict[str, Any]) -> CampaignConfig:
         instrument_ids=dict(entry.get("instrument_ids", {})),
         provenance=dict(entry.get("provenance", {})),
         event_sources=dict(entry.get("event_sources", {})),
+        publish_state=publish_state,
     )
 
 

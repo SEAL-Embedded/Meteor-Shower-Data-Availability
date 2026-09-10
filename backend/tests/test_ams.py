@@ -12,6 +12,8 @@ import pytest
 from availability.config import Config
 from availability.core.geo import haversine_km
 from availability.ingest.ams import (
+    AmsFireballAdapter,
+    AmsRequestError,
     parse_country_options,
     parse_event_page,
     parse_page,
@@ -412,3 +414,42 @@ class TestRangeFilter:
         cache_detail(tmp_path, 6663, EVENT_PAGE)
         store = Store.build(make_config(max_detail_fetches=0))
         assert len(store.events) == 6
+
+
+class TestCatalogueDown:
+    """A catalogue that is unreachable must not be able to empty the record.
+
+    The published dataset is the season's whole event list. Before this, an hour of the site
+    returning 503 was enough for a publish to write a file with no events in it at all -- every
+    fireball the coverage was measured against gone, and nothing on the page saying why.
+    """
+
+    @pytest.fixture
+    def unreachable(self, monkeypatch):
+        def refuse(self, url, query, label):
+            raise AmsRequestError(f"{label}: HTTP 503")
+
+        monkeypatch.setattr(AmsFireballAdapter, "_request", refuse)
+
+    def test_an_expired_cache_is_used_rather_than_losing_the_events(
+        self, make_config, tmp_path, unreachable
+    ):
+        cache_listing(tmp_path, ONE_PAGE)
+        store = Store.build(make_config(fetch_details="false", max_age_s=0))
+        assert len(store.events) == 6
+
+    def test_serving_an_expired_cache_is_never_reported_as_a_clean_fetch(
+        self, make_config, tmp_path, unreachable
+    ):
+        cache_listing(tmp_path, ONE_PAGE)
+        store = Store.build(make_config(fetch_details="false", max_age_s=0))
+        assert store.sources[0].status is SourceStatus.STALE
+        assert "expired cache" in store.sources[0].detail
+        assert "503" in store.sources[0].detail
+
+    def test_with_nothing_cached_the_failure_still_surfaces(
+        self, make_config, tmp_path, unreachable
+    ):
+        store = Store.build(make_config(fetch_details="false", max_age_s=0))
+        assert store.sources[0].status is SourceStatus.ERROR
+        assert not store.events

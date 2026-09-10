@@ -38,7 +38,24 @@ path with the wrong username in it looks like a slow first run rather than a mis
 copy, confirm the cache is being read: `check` reports the AMS source as **served entirely from
 cache** when nothing was fetched.
 
-### Then switch the live sources on
+### A finished season comes from the archive index, not a live scan
+
+2026 is published from `archive-2026`, which reads `coverage_intervals.csv` — one row per recording
+folder, written by the archive's own `correlate_coverage.py`. Prefer that for any season that has
+stopped recording. The index is a few kilobytes where the recordings are hundreds of gigabytes on a
+drive that is not always mounted, so a re-publish reproduces the season anywhere instead of only on
+the workstation; and both instruments come out of one file, so they cannot drift apart the way a
+half-finished transcription did.
+
+**Do not enable a live scan of the same recordings alongside it.** The same hours would be counted
+twice, once from the files and once from the index. `nimbustrace-captures` and `supersid-audio` are
+off for exactly that reason, not because they are broken.
+
+Sessions in the index are unioned, never summed. Two SuperSID recordings in 2026 overlap by 11.94 h;
+adding their durations puts the duty cycle at a fictional 98.8% instead of 95.0%. Anything else that
+learns to read this index has to do the same.
+
+### Switching the live sources on for a season still recording
 
 Both instrument sources ship disabled with placeholder drive letters. For each of
 `nimbustrace-captures` and `supersid-audio`: set `enabled = true`, and replace `path` with the real
@@ -51,9 +68,17 @@ session folder to carry the completeness suffix (`Data-…_completely_saved/data
 wants the timestamp on the folder (`SuperSID-0813T12-03-00/`) and needs `year` set, because those
 folder names carry no year.
 
-### Two things in the config that are wrong for 2026
+### Three things in the config that are wrong for 2026
 
-Fix these while you are in there. Neither announces itself — both produce a plausible record.
+Fix these while you are in there. None of them announces itself — all three produce a plausible
+record.
+
+**A `path` that does not exist takes the instrument off the site without emptying it.** The
+NimbusTrace path read `R:/NimbusTrace-0812TO` — one directory that has never existed — so the source
+failed on every run and published nothing, while the previous run's records stayed in the committed
+`campaign.json` and went on being served. A failing scan therefore looked exactly like a working
+one, for six days of missing coverage. `check` names every path it tried; read that line rather than
+the dashboard, which cannot tell a stale record from a fresh one.
 
 **`duration_source = "fixed"` on `supersid-audio` undercounts by about 7%.** It assumes every capture
 is `duration_s = 10`. Running the repository's own WAV reader over the example file gives
